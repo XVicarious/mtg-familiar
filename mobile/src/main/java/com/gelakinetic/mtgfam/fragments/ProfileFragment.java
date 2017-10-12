@@ -128,12 +128,12 @@ public class ProfileFragment extends FamiliarFragment {
         if (getFamiliarActivity() == null || !getFamiliarActivity().mIsMenuVisible) {
             updateDCI.setVisible(false);
             removeDCI.setVisible(false);
-        } else if (mDCINumber != null && !mDCINumber.isEmpty()) {
-            updateDCI.setVisible(false);
-            removeDCI.setVisible(true);
-        } else {
+        } else if (mDCINumber == null || mDCINumber.isEmpty()) {
             updateDCI.setVisible(true);
             removeDCI.setVisible(false);
+        } else {
+            updateDCI.setVisible(false);
+            removeDCI.setVisible(true);
         }
     }
 

@@ -230,7 +230,9 @@ public class TradeDialogFragment extends FamiliarDialogFragment {
                                 /* Check if the user hand-modified the price by comparing the current price
                                  * to the cached price */
                                 int oldPrice;
-                                if (data.priceInfo != null) {
+                                if (data.priceInfo == null) {
+                                    data.customPrice = true;
+                                } else {
                                     if (data.foil) {
                                         oldPrice = (int) (data.priceInfo.mFoilAverage * 100);
                                     } else {
@@ -257,8 +259,6 @@ public class TradeDialogFragment extends FamiliarDialogFragment {
                                     if (oldPrice != data.price) {
                                         data.customPrice = true;
                                     }
-                                } else {
-                                    data.customPrice = true;
                                 }
 
                                 /* Notify things to update */

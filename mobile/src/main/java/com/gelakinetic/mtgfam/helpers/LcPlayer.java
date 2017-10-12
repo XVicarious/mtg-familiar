@@ -179,7 +179,30 @@ public class LcPlayer {
         }
 
         /* If we're not committing yet, make a new history entry */
-        if (!mCommitting) {
+        if (mCommitting) {
+            if (!immediate) {
+                /* Modify current historyEntry */
+                switch (mMode) {
+                    case LifeCounterFragment.STAT_POISON: {
+                        mPoisonHistory.get(0).mDelta += delta;
+                        mPoisonHistory.get(0).mAbsolute += delta;
+                        if (null != mHistoryPoisonAdapter) {
+                            mHistoryPoisonAdapter.notifyDataSetChanged();
+                        }
+                        break;
+                    }
+                    case LifeCounterFragment.STAT_COMMANDER:
+                    case LifeCounterFragment.STAT_LIFE: {
+                        mLifeHistory.get(0).mDelta += delta;
+                        mLifeHistory.get(0).mAbsolute += delta;
+                        if (null != mHistoryLifeAdapter) {
+                            mHistoryLifeAdapter.notifyDataSetChanged();
+                        }
+                        break;
+                    }
+                }
+            }
+        } else {
             /* Create a new historyEntry */
             HistoryEntry entry = new HistoryEntry();
             /* If there are no entries, assume life is mDefaultLifeTotal */
@@ -207,27 +230,6 @@ public class LcPlayer {
                 mPoisonHistory.add(0, entry);
                 if (mHistoryPoisonAdapter != null) {
                     mHistoryPoisonAdapter.notifyDataSetChanged();
-                }
-            }
-        } else if (!immediate) {
-            /* Modify current historyEntry */
-            switch (mMode) {
-                case LifeCounterFragment.STAT_POISON: {
-                    mPoisonHistory.get(0).mDelta += delta;
-                    mPoisonHistory.get(0).mAbsolute += delta;
-                    if (null != mHistoryPoisonAdapter) {
-                        mHistoryPoisonAdapter.notifyDataSetChanged();
-                    }
-                    break;
-                }
-                case LifeCounterFragment.STAT_COMMANDER:
-                case LifeCounterFragment.STAT_LIFE: {
-                    mLifeHistory.get(0).mDelta += delta;
-                    mLifeHistory.get(0).mAbsolute += delta;
-                    if (null != mHistoryLifeAdapter) {
-                        mHistoryLifeAdapter.notifyDataSetChanged();
-                    }
-                    break;
                 }
             }
         }
@@ -603,11 +605,11 @@ public class LcPlayer {
         @Override
         public View getView(int position, View convertView, @NonNull ViewGroup parent) {
             View view;
-            if (convertView != null) {
-                view = convertView;
-            } else {
+            if (convertView == null) {
                 view = LayoutInflater.from(mFragment.getActivity())
                         .inflate(R.layout.life_counter_history_adapter_row, null, false);
+            } else {
+                view = convertView;
             }
             assert view != null;
 
@@ -685,11 +687,11 @@ public class LcPlayer {
         @Override
         public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
             View view;
-            if (convertView != null) {
-                view = convertView;
-            } else {
+            if (convertView == null) {
                 view = LayoutInflater.from(mFragment.getActivity())
                         .inflate(R.layout.life_counter_player_commander, null, false);
+            } else {
+                view = convertView;
             }
             assert view != null;
 

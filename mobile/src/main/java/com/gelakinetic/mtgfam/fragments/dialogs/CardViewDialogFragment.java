@@ -143,11 +143,11 @@ public class CardViewDialogFragment extends FamiliarDialogFragment {
                 m.setText(String.format(Locale.US, "$%1$,.2f", getCardViewFragment().mPriceInfo.mAverage));
                 h.setText(String.format(Locale.US, "$%1$,.2f", getCardViewFragment().mPriceInfo.mHigh));
 
-                if (getCardViewFragment().mPriceInfo.mFoilAverage != 0) {
-                    f.setText(String.format(Locale.US, "$%1$,.2f", getCardViewFragment().mPriceInfo.mFoilAverage));
-                } else {
+                if (getCardViewFragment().mPriceInfo.mFoilAverage == 0) {
                     f.setVisibility(View.GONE);
                     v.findViewById(R.id.foil_label).setVisibility(View.GONE);
+                } else {
+                    f.setText(String.format(Locale.US, "$%1$,.2f", getCardViewFragment().mPriceInfo.mFoilAverage));
                 }
                 priceLink.setMovementMethod(LinkMovementMethod.getInstance());
                 priceLink.setText(ImageGetterHelper.formatHtmlString("<a href=\"" + getCardViewFragment().mPriceInfo.mUrl + "\">" +

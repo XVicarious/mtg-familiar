@@ -257,13 +257,15 @@ public class ResultListAdapter extends SimpleCursorAdapter {
         if (hideAbility) {
             view.findViewById(R.id.cardability).setVisibility(View.GONE);
         }
-        if (!hideLoyalty) {
+        if (hideLoyalty) {
+            if (hidePT) {
+                view.findViewById(R.id.cardp).setVisibility(View.GONE);
+                view.findViewById(R.id.cardslash).setVisibility(View.GONE);
+                view.findViewById(R.id.cardt).setVisibility(View.GONE);
+            }
+        } else {
             view.findViewById(R.id.cardp).setVisibility(View.GONE);
             view.findViewById(R.id.cardslash).setVisibility(View.GONE);
-        } else if (hidePT) {
-            view.findViewById(R.id.cardp).setVisibility(View.GONE);
-            view.findViewById(R.id.cardslash).setVisibility(View.GONE);
-            view.findViewById(R.id.cardt).setVisibility(View.GONE);
         }
         if (hideRarity) {
             view.findViewById(R.id.rarity).setVisibility(View.GONE);

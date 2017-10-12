@@ -176,36 +176,38 @@ public class ResultListFragment extends FamiliarFragment {
         }
 
         Bundle res = getFamiliarActivity().getFragmentResults();
-        if (res != null) {
-            if (mCursor.getCount() == 1) {
-                /* Jump back past the result list (it wasn't displayed because this card is a singleton) */
-                if (!getActivity().isTaskRoot()) {
-                    getActivity().finish();
+        if (res == null) {
+            if (this.isAdded()) {
+                if (mCursor == null || mCursor.getCount() == 0) {
+                    ToastWrapper.makeText(this.getActivity(), getString(R.string.search_toast_no_results), ToastWrapper.LENGTH_SHORT
+                    ).show();
+                    if (getActivity().isTaskRoot()) {
+                        getFragmentManager().popBackStack();
+                    } else {
+                        getActivity().finish();
+                    }
+                } else if (mCursor.getCount() == 1) {
+                    mCursor.moveToFirst();
+                    long id = mCursor.getLong(mCursor.getColumnIndex(CardDbAdapter.KEY_ID));
+                    try {
+                        startCardViewFrag(id);
+                    } catch (FamiliarDbException e) {
+                        handleFamiliarDbException(true);
+                    }
                 } else {
-                    getFragmentManager().popBackStack();
+                    if (savedInstanceState == null) {
+                        ToastWrapper.makeText(this.getActivity(), String.format(getResources().getQuantityString(R.plurals.search_toast_results, mCursor.getCount()),
+                                mCursor.getCount()), ToastWrapper.LENGTH_LONG).show();
+                    }
                 }
             }
-        } else if (this.isAdded()) {
-            if (mCursor == null || mCursor.getCount() == 0) {
-                ToastWrapper.makeText(this.getActivity(), getString(R.string.search_toast_no_results), ToastWrapper.LENGTH_SHORT
-                ).show();
-                if (!getActivity().isTaskRoot()) {
-                    getActivity().finish();
-                } else {
+        } else {
+            if (mCursor.getCount() == 1) {
+                /* Jump back past the result list (it wasn't displayed because this card is a singleton) */
+                if (getActivity().isTaskRoot()) {
                     getFragmentManager().popBackStack();
-                }
-            } else if (mCursor.getCount() == 1) {
-                mCursor.moveToFirst();
-                long id = mCursor.getLong(mCursor.getColumnIndex(CardDbAdapter.KEY_ID));
-                try {
-                    startCardViewFrag(id);
-                } catch (FamiliarDbException e) {
-                    handleFamiliarDbException(true);
-                }
-            } else {
-                if (savedInstanceState == null) {
-                    ToastWrapper.makeText(this.getActivity(), String.format(getResources().getQuantityString(R.plurals.search_toast_results, mCursor.getCount()),
-                            mCursor.getCount()), ToastWrapper.LENGTH_LONG).show();
+                } else {
+                    getActivity().finish();
                 }
             }
         }

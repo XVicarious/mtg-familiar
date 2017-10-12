@@ -397,18 +397,17 @@ public class FamiliarActivity extends AppCompatActivity {
                 }
             }
 
-            if (nextUrl != null) {
-                /* If there is a URL to follow, follow it */
-                return getHttpInputStream(nextUrl, logWriter, recursionLevel + 1);
-            } else {
+            if (nextUrl == null) {
                 /* Otherwise return null */
                 return null;
             }
 
-        } else {
-            /* HTTP response is A-OK. Return the inputStream */
-            return connection.getInputStream();
+            /* If there is a URL to follow, follow it */
+            return getHttpInputStream(nextUrl, logWriter, recursionLevel + 1);
         }
+
+        /* HTTP response is A-OK. Return the inputStream */
+        return connection.getInputStream();
     }
 
     /**
@@ -815,19 +814,12 @@ public class FamiliarActivity extends AppCompatActivity {
                 try {
                     SQLiteDatabase database = DatabaseManager.getInstance(this, false).openDatabase(false);
                     String queryParam;
-                    if ((queryParam = data.getQueryParameter("multiverseid")) != null) {
-                        Cursor cursor = CardDbAdapter.fetchCardByMultiverseId(Long.parseLong(queryParam),
-                                new String[]{CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_ID}, database);
-                        if (cursor.getCount() != 0) {
-                            isDeepLink = true;
-                            args.putLongArray(CardViewPagerFragment.CARD_ID_ARRAY,
-                                    new long[]{cursor.getInt(cursor.getColumnIndex(CardDbAdapter.KEY_ID))});
-                        }
-                        cursor.close();
-                        if (args.size() == 0) {
+                    if ((queryParam = data.getQueryParameter("multiverseid")) == null) {
+
+                        if ((queryParam = data.getQueryParameter("name")) == null) {
                             throw new Exception("Not Found");
                         }
-                    } else if ((queryParam = data.getQueryParameter("name")) != null) {
+
                         Cursor cursor = CardDbAdapter.fetchCardByName(queryParam,
                                 Collections.singletonList(CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_ID), true, database);
                         if (cursor.getCount() != 0) {
@@ -840,7 +832,17 @@ public class FamiliarActivity extends AppCompatActivity {
                             throw new Exception("Not Found");
                         }
                     } else {
-                        throw new Exception("Not Found");
+                        Cursor cursor = CardDbAdapter.fetchCardByMultiverseId(Long.parseLong(queryParam),
+                                new String[]{CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_ID}, database);
+                        if (cursor.getCount() != 0) {
+                            isDeepLink = true;
+                            args.putLongArray(CardViewPagerFragment.CARD_ID_ARRAY,
+                                    new long[]{cursor.getInt(cursor.getColumnIndex(CardDbAdapter.KEY_ID))});
+                        }
+                        cursor.close();
+                        if (args.size() == 0) {
+                            throw new Exception("Not Found");
+                        }
                     }
                 } catch (Exception e) {
                     /* empty cursor, just return */
@@ -885,22 +887,24 @@ public class FamiliarActivity extends AppCompatActivity {
                         }
                     }
 
-                    if (cursor != null) {
-                        if (cursor.getCount() != 0) {
-                            args.putLongArray(CardViewPagerFragment.CARD_ID_ARRAY,
-                                    new long[]{cursor.getInt(cursor.getColumnIndex(CardDbAdapter.KEY_ID))});
-                        } else {
-                            /* empty cursor, just return */
+                    if (cursor == null) {
+                        if (!screenLaunched) {
+                            /* null cursor, just return */
                             ToastWrapper.makeText(this, R.string.no_results_found, ToastWrapper.LENGTH_LONG).show();
                             this.finish();
                             shouldSelectItem = false;
                         }
+                    } else {
+                        if (cursor.getCount() == 0) {
+                            /* empty cursor, just return */
+                            ToastWrapper.makeText(this, R.string.no_results_found, ToastWrapper.LENGTH_LONG).show();
+                            this.finish();
+                            shouldSelectItem = false;
+                        } else {
+                            args.putLongArray(CardViewPagerFragment.CARD_ID_ARRAY,
+                                    new long[]{cursor.getInt(cursor.getColumnIndex(CardDbAdapter.KEY_ID))});
+                        }
                         cursor.close();
-                    } else if (!screenLaunched) {
-                        /* null cursor, just return */
-                        ToastWrapper.makeText(this, R.string.no_results_found, ToastWrapper.LENGTH_LONG).show();
-                        this.finish();
-                        shouldSelectItem = false;
                     }
                 } catch (FamiliarDbException e) {
                     e.printStackTrace();

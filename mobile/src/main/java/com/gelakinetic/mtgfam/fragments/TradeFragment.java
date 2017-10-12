@@ -521,31 +521,7 @@ public class TradeFragment extends FamiliarListFragment {
      */
     public void loadPrice(final MtgCard data, final CardDataAdapter adapter) {
         /* If the priceInfo is already loaded, don't bother performing a query */
-        if (data.priceInfo != null) {
-            if (data.foil) {
-                data.price = (int) (data.priceInfo.mFoilAverage * 100);
-            } else {
-                switch (mPriceSetting) {
-                    case LOW_PRICE: {
-                        data.price = (int) (data.priceInfo.mLow * 100);
-                        break;
-                    }
-                    default:
-                    case AVG_PRICE: {
-                        data.price = (int) (data.priceInfo.mAverage * 100);
-                        break;
-                    }
-                    case HIGH_PRICE: {
-                        data.price = (int) (data.priceInfo.mHigh * 100);
-                        break;
-                    }
-                    case FOIL_PRICE: {
-                        data.price = (int) (data.priceInfo.mFoilAverage * 100);
-                        break;
-                    }
-                }
-            }
-        } else {
+        if (data.priceInfo == null) {
             /* priceInfo is null, perform a query */
             PriceFetchRequest priceRequest = new PriceFetchRequest(data.mName, data.setCode,
                     data.mNumber, -1, getActivity());
@@ -633,6 +609,30 @@ public class TradeFragment extends FamiliarListFragment {
                         }
                     }
             );
+        } else {
+            if (data.foil) {
+                data.price = (int) (data.priceInfo.mFoilAverage * 100);
+            } else {
+                switch (mPriceSetting) {
+                    case LOW_PRICE: {
+                        data.price = (int) (data.priceInfo.mLow * 100);
+                        break;
+                    }
+                    default:
+                    case AVG_PRICE: {
+                        data.price = (int) (data.priceInfo.mAverage * 100);
+                        break;
+                    }
+                    case HIGH_PRICE: {
+                        data.price = (int) (data.priceInfo.mHigh * 100);
+                        break;
+                    }
+                    case FOIL_PRICE: {
+                        data.price = (int) (data.priceInfo.mFoilAverage * 100);
+                        break;
+                    }
+                }
+            }
         }
     }
 

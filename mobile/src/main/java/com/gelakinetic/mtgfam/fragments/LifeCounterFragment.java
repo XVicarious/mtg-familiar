@@ -139,10 +139,10 @@ public class LifeCounterFragment extends FamiliarFragment implements TextToSpeec
 
         mCommanderPlayerView = myFragmentView.findViewById(R.id.commander_player);
 
-        if (null != myFragmentView.findViewById(R.id.playerScrollView_horz)) {
-            mScrollView = myFragmentView.findViewById(R.id.playerScrollView_horz);
-        } else {
+        if (null == myFragmentView.findViewById(R.id.playerScrollView_horz)) {
             mScrollView = myFragmentView.findViewById(R.id.playerScrollView_vert);
+        } else {
+            mScrollView = myFragmentView.findViewById(R.id.playerScrollView_horz);
         }
         ViewTreeObserver viewTreeObserver = mScrollView.getViewTreeObserver();
         assert viewTreeObserver != null;
@@ -407,9 +407,7 @@ public class LifeCounterFragment extends FamiliarFragment implements TextToSpeec
      */
     public void setCommanderInfo(int toBeRemoved) {
         for (LcPlayer player1 : mPlayers) {
-            if (toBeRemoved != -1) {
-                player1.mCommanderDamage.remove(toBeRemoved);
-            } else {
+            if (toBeRemoved == -1) {
                 for (int i = 0; i < mPlayers.size(); i++) {
                     /* An entry for this player exists, just set the name */
                     if (player1.mCommanderDamage.size() > i) {
@@ -423,6 +421,8 @@ public class LifeCounterFragment extends FamiliarFragment implements TextToSpeec
                         player1.mCommanderDamage.add(ce);
                     }
                 }
+            } else {
+                player1.mCommanderDamage.remove(toBeRemoved);
             }
             /* Redraw the information */
             if (player1.mCommanderDamageAdapter != null) {
@@ -475,12 +475,12 @@ public class LifeCounterFragment extends FamiliarFragment implements TextToSpeec
                 case DISPLAY_COMMANDER:
                     mGridLayout.setOrientation(GridLayout.VERTICAL);
                     mGridLayout.setColumnCount(GridLayout.UNDEFINED);
-                    if (mListSizeHeight != -1) {
+                    if (mListSizeHeight == -1) {
+                        mGridLayout.setRowCount(GridLayout.UNDEFINED);
+                    } else {
                         float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 48,
                                 getActivity().getResources().getDisplayMetrics());
                         mGridLayout.setRowCount((int) (mListSizeHeight / height));
-                    } else {
-                        mGridLayout.setRowCount(GridLayout.UNDEFINED);
                     }
                     break;
             }
@@ -705,10 +705,10 @@ public class LifeCounterFragment extends FamiliarFragment implements TextToSpeec
                 for (int i = lifeHistory.length - 1; i >= 0; i--) {
                     entry = new HistoryEntry();
                     entry.mAbsolute = Integer.parseInt(lifeHistory[i]);
-                    if (i != lifeHistory.length - 1) {
-                        entry.mDelta = entry.mAbsolute - player.mLifeHistory.get(0).mAbsolute;
-                    } else {
+                    if (i == lifeHistory.length - 1) {
                         entry.mDelta = entry.mAbsolute - player.mDefaultLifeTotal;
+                    } else {
+                        entry.mDelta = entry.mAbsolute - player.mLifeHistory.get(0).mAbsolute;
                     }
                     player.mLifeHistory.add(0, entry);
                 }
@@ -729,10 +729,10 @@ public class LifeCounterFragment extends FamiliarFragment implements TextToSpeec
                 for (int i = poisonHistory.length - 1; i >= 0; i--) {
                     entry = new HistoryEntry();
                     entry.mAbsolute = Integer.parseInt(poisonHistory[i]);
-                    if (i != poisonHistory.length - 1) {
-                        entry.mDelta = entry.mAbsolute - player.mPoisonHistory.get(0).mAbsolute;
-                    } else {
+                    if (i == poisonHistory.length - 1) {
                         entry.mDelta = entry.mAbsolute;
+                    } else {
+                        entry.mDelta = entry.mAbsolute - player.mPoisonHistory.get(0).mAbsolute;
                     }
                     player.mPoisonHistory.add(0, entry);
                 }

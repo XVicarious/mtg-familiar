@@ -195,7 +195,12 @@ public class RulesFragment extends FamiliarFragment {
                 list.setAdapter(adapter);
             }
         }
-        if (cursor != null) {
+        if (cursor == null) {
+            if (!isBanned) { /* Cursor is null. weird. */
+                ToastWrapper.makeText(getActivity(), R.string.rules_no_results_toast, ToastWrapper.LENGTH_SHORT).show();
+                getFragmentManager().popBackStack();
+            }
+        } else {
             try {
                 if (cursor.getCount() > 0) {
                     cursor.moveToFirst();
@@ -290,11 +295,6 @@ public class RulesFragment extends FamiliarFragment {
                 handleFamiliarDbException(true);
                 return null;
             }
-        } else {
-            if (!isBanned) { /* Cursor is null. weird. */
-                ToastWrapper.makeText(getActivity(), R.string.rules_no_results_toast, ToastWrapper.LENGTH_SHORT).show();
-                getFragmentManager().popBackStack();
-            }
         }
 
         list.setSelection(position);
@@ -303,10 +303,10 @@ public class RulesFragment extends FamiliarFragment {
         mUnderscorePattern = Pattern.compile("_(.+?)_");
         mExamplePattern = Pattern.compile("(Example:.+)$");
         mGlyphPattern = Pattern.compile("\\{([a-zA-Z0-9/]{1,3})\\}");
-        if (keyword != null && !keyword.contains("{") && !keyword.contains("}")) {
-            mKeywordPattern = Pattern.compile("(" + Pattern.quote(keyword) + ")", Pattern.CASE_INSENSITIVE);
-        } else {
+        if (keyword == null || keyword.contains("{") || keyword.contains("}")) {
             mKeywordPattern = null;
+        } else {
+            mKeywordPattern = Pattern.compile("(" + Pattern.quote(keyword) + ")", Pattern.CASE_INSENSITIVE);
         }
         mHyperlinkPattern = Pattern.compile("<(http://)?(www|gatherer|mtgcommander)(.+?)>");
 

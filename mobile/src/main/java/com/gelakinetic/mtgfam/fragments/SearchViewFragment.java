@@ -143,13 +143,13 @@ public class SearchViewFragment extends FamiliarFragment {
         mRarityNames = new String[i];
         mRarityCodes = new char[i];
 
-        if (savedInstanceState != null) {
+        if (savedInstanceState == null) {
+            mRarityCheckedIndices = new int[0];
+            mSelectedFormat = -1;
+        } else {
             mSelectedFormat = savedInstanceState.getInt(SAVED_FORMAT_KEY);
             mRarityCheckedIndices = savedInstanceState.getIntArray(SAVED_RARITY_KEY);
             mSetCheckedIndices = savedInstanceState.getIntArray(SAVED_SET_KEY);
-        } else {
-            mRarityCheckedIndices = new int[0];
-            mSelectedFormat = -1;
         }
 
         while (i-- > 0) {
@@ -884,18 +884,18 @@ public class SearchViewFragment extends FamiliarFragment {
             mCmcChoice.setSelection(Arrays.asList(getResources().getStringArray(R.array.cmc_spinner))
                     .indexOf(String.valueOf(criteria.cmc)));
 
-            if (criteria.set != null) {
+            if (criteria.set == null) {
+                mSetField.clearTextAndTokens();
+            } else {
                 /* Get a list of the persisted sets */
                 for (String set : criteria.set.split("-")) {
                     mSetField.addObject(set);
                 }
-            } else {
-                mSetField.clearTextAndTokens();
             }
-            if (criteria.mc != null) {
-                mManaCostTextView.setObjectsFromString(criteria.mc);
-            } else {
+            if (criteria.mc == null) {
                 mManaCostTextView.clearTextAndTokens();
+            } else {
+                mManaCostTextView.setObjectsFromString(criteria.mc);
             }
             mManaComparisonSpinner.setSelection(criteria.mcLogic.ordinal());
             if (mFormatNames != null) {

@@ -128,7 +128,10 @@ public class PriceFetchRequest extends SpiceRequest<PriceInfo> {
                 String tcgCardName;
 
                 /* Set up retries for multicard ordering */
-                if (multiCardType != CardDbAdapter.MultiCardType.NOPE) {
+                if (multiCardType == CardDbAdapter.MultiCardType.NOPE) {
+                    /* This isn't a multicard */
+                    tcgCardName = mCardName;
+                } else {
                     /* Next time try the other order */
                     switch (retry % (MAX_NUM_RETRIES / 2)) {
                         case 0:
@@ -152,9 +155,6 @@ public class PriceFetchRequest extends SpiceRequest<PriceInfo> {
                             tcgCardName = mCardName;
                             break;
                     }
-                } else {
-                    /* This isn't a multicard */
-                    tcgCardName = mCardName;
                 }
 
                 /* Retry with accent marks removed */

@@ -370,10 +370,10 @@ public class MtgCard extends Card {
             sb.append("\r\n");
         }
 
-        if (mLoyalty != CardDbAdapter.NO_ONE_CARES) {
-            sb.append(mLoyalty);
-            sb.append("\r\n");
-        } else if (mPower != CardDbAdapter.NO_ONE_CARES && mToughness != CardDbAdapter.NO_ONE_CARES) {
+        if (mLoyalty == CardDbAdapter.NO_ONE_CARES) {
+            if (mPower == CardDbAdapter.NO_ONE_CARES || mToughness == CardDbAdapter.NO_ONE_CARES) {
+                return;
+            }
             if (mPower == (int) mPower) {
                 sb.append((int) mPower);
             } else {
@@ -385,6 +385,9 @@ public class MtgCard extends Card {
             } else {
                 sb.append(mToughness);
             }
+            sb.append("\r\n");
+        } else {
+            sb.append(mLoyalty);
             sb.append("\r\n");
         }
     }

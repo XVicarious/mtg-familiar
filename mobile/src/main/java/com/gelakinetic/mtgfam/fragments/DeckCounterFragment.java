@@ -62,12 +62,12 @@ public class DeckCounterFragment extends FamiliarFragment implements ViewFactory
         mDeckCountText.setOutAnimation(AnimationUtils.loadAnimation(this.getActivity(), android.R.anim.slide_out_right));
 
         /* Restore any state, if available */
-        if (savedInstanceState != null) {
-            mDeckCount = savedInstanceState.getInt(DECK_COUNT_KEY);
-            mDeckCountSequence = StringToArray(savedInstanceState.getString(SEQUENCE_KEY));
-        } else {
+        if (savedInstanceState == null) {
             mDeckCount = 0;
             mDeckCountSequence = new ArrayList<>();
+        } else {
+            mDeckCount = savedInstanceState.getInt(DECK_COUNT_KEY);
+            mDeckCountSequence = StringToArray(savedInstanceState.getString(SEQUENCE_KEY));
         }
 
         StringBuilder history = new StringBuilder();

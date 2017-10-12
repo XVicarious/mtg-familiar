@@ -71,6 +71,7 @@ import com.gelakinetic.mtgfam.R;
 import com.gelakinetic.mtgfam.fragments.dialogs.CardViewDialogFragment;
 import com.gelakinetic.mtgfam.fragments.dialogs.FamiliarDialogFragment;
 import com.gelakinetic.mtgfam.helpers.AppIndexingWrapper;
+import com.gelakinetic.mtgfam.helpers.CardHelpers;
 import com.gelakinetic.mtgfam.helpers.ColorIndicatorView;
 import com.gelakinetic.mtgfam.helpers.ImageGetterHelper;
 import com.gelakinetic.mtgfam.helpers.PriceFetchRequest;
@@ -219,7 +220,9 @@ public class CardViewFragment extends FamiliarFragment {
     private void reportAppIndexViewIfAble() {
         /* If this view hasn't been reported yet, and the name exists */
         if (!mHasReportedView) {
-            if (mCardName != null) {
+            if (mCardName == null) {
+                mShouldReportView = true;
+            } else {
                 /* Connect your client */
                 getFamiliarActivity().mAppIndexingWrapper.connect();
                 AppIndexingWrapper
@@ -228,8 +231,6 @@ public class CardViewFragment extends FamiliarFragment {
                 /* Manage state */
                 mHasReportedView = true;
                 mShouldReportView = false;
-            } else {
-                mShouldReportView = true;
             }
         }
     }
@@ -560,63 +561,27 @@ public class CardViewFragment extends FamiliarFragment {
             int loyalty = cCardById.getInt(cCardById.getColumnIndex(CardDbAdapter.KEY_LOYALTY));
             float p = cCardById.getFloat(cCardById.getColumnIndex(CardDbAdapter.KEY_POWER));
             float t = cCardById.getFloat(cCardById.getColumnIndex(CardDbAdapter.KEY_TOUGHNESS));
-            if (loyalty != CardDbAdapter.NO_ONE_CARES) {
+            if (loyalty == CardDbAdapter.NO_ONE_CARES) {
+                if (p == CardDbAdapter.NO_ONE_CARES || t == CardDbAdapter.NO_ONE_CARES) {
+                    mPowTouTextView.setText("");
+                } else {
+
+                    String powTouStr = CardHelpers.adaptCardPT(p);
+
+                    powTouStr += "/";
+
+                    powTouStr += CardHelpers.adaptCardPT(t);
+
+                    addToDescription(getString(R.string.search_power), powTouStr);
+
+                    mPowTouTextView.setText(powTouStr);
+                }
+            } else {
                 if (loyalty == CardDbAdapter.X) {
                     mPowTouTextView.setText("X");
                 } else {
                     mPowTouTextView.setText(Integer.toString(loyalty));
                 }
-            } else if (p != CardDbAdapter.NO_ONE_CARES && t != CardDbAdapter.NO_ONE_CARES) {
-
-                String powTouStr = "";
-
-                if (p == CardDbAdapter.STAR)
-                    powTouStr += "*";
-                else if (p == CardDbAdapter.ONE_PLUS_STAR)
-                    powTouStr += "1+*";
-                else if (p == CardDbAdapter.TWO_PLUS_STAR)
-                    powTouStr += "2+*";
-                else if (p == CardDbAdapter.SEVEN_MINUS_STAR)
-                    powTouStr += "7-*";
-                else if (p == CardDbAdapter.STAR_SQUARED)
-                    powTouStr += "*^2";
-                else if (p == CardDbAdapter.X)
-                    powTouStr += "X";
-                else {
-                    if (p == (int) p) {
-                        powTouStr += (int) p;
-                    } else {
-                        powTouStr += p;
-                    }
-                }
-
-                powTouStr += "/";
-
-                if (t == CardDbAdapter.STAR)
-                    powTouStr += "*";
-                else if (t == CardDbAdapter.ONE_PLUS_STAR)
-                    powTouStr += "1+*";
-                else if (t == CardDbAdapter.TWO_PLUS_STAR)
-                    powTouStr += "2+*";
-                else if (t == CardDbAdapter.SEVEN_MINUS_STAR)
-                    powTouStr += "7-*";
-                else if (t == CardDbAdapter.STAR_SQUARED)
-                    powTouStr += "*^2";
-                else if (t == CardDbAdapter.X)
-                    powTouStr += "X";
-                else {
-                    if (t == (int) t) {
-                        powTouStr += (int) t;
-                    } else {
-                        powTouStr += t;
-                    }
-                }
-
-                addToDescription(getString(R.string.search_power), powTouStr);
-
-                mPowTouTextView.setText(powTouStr);
-            } else {
-                mPowTouTextView.setText("");
             }
 
             boolean isMultiCard = false;
@@ -752,10 +717,10 @@ public class CardViewFragment extends FamiliarFragment {
             while (!cCardByName.isAfterLast()) {
                 String number =
                         cCardByName.getString(cCardByName.getColumnIndex(CardDbAdapter.KEY_NUMBER));
-                if (!(number == null || number.length() == 0)) {
-                    number = " (" + number + ")";
-                } else {
+                if ((number == null || number.length() == 0)) {
                     number = "";
+                } else {
+                    number = " (" + number + ")";
                 }
                 if (mPrintings.add(CardDbAdapter
                         .getSetNameFromCode(cCardByName.getString(cCardByName.getColumnIndex(CardDbAdapter.KEY_SET)), database) + number)) {
@@ -972,13 +937,13 @@ public class CardViewFragment extends FamiliarFragment {
                                 if (CardViewFragment.this.isAdded()) {
                                     mActivity.clearLoading();
 
-                                    if (result != null) {
-                                        mPriceInfo = result;
-                                        showDialog(CardViewDialogFragment.GET_PRICE);
-                                    } else {
+                                    if (result == null) {
                                         ToastWrapper.makeText(mActivity,
                                                 R.string.card_view_price_not_found,
                                                 ToastWrapper.LENGTH_SHORT).show();
+                                    } else {
+                                        mPriceInfo = result;
+                                        showDialog(CardViewDialogFragment.GET_PRICE);
                                     }
                                 }
                             }
@@ -1127,14 +1092,14 @@ public class CardViewFragment extends FamiliarFragment {
 
             /* Check if permission is granted */
             if (ContextCompat.checkSelfPermission(CardViewFragment.this.mActivity,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                        /* Permission already granted */
+                        mToastString = saveImage();
+                    } else {
                 /* Request the permission */
                 ActivityCompat.requestPermissions(CardViewFragment.this.mActivity,
                         new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                         FamiliarActivity.REQUEST_WRITE_EXTERNAL_STORAGE_IMAGE);
-            } else {
-                /* Permission already granted */
-                mToastString = saveImage();
             }
 
             return null;

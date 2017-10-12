@@ -461,10 +461,10 @@ public final class DiskLruCache implements Closeable {
         writer.write("\n");
 
         for (Entry entry : lruEntries.values()) {
-            if (entry.currentEditor != null) {
-                writer.write(DIRTY + ' ' + entry.key + '\n');
-            } else {
+            if (entry.currentEditor == null) {
                 writer.write(CLEAN + ' ' + entry.key + entry.getLengths() + '\n');
+            } else {
+                writer.write(DIRTY + ' ' + entry.key + '\n');
             }
         }
 
@@ -790,7 +790,7 @@ public final class DiskLruCache implements Closeable {
          */
         public String getString(int index) throws IOException {
             InputStream in = newInputStream(index);
-            return in != null ? inputStreamToString(in) : null;
+            return in == null ? null : inputStreamToString(in);
         }
 
         /**

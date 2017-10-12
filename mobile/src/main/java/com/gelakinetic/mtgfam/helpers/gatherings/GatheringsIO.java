@@ -241,11 +241,11 @@ public class GatheringsIO {
 
         int displayMode;
         Element mode = (Element) docEle.getElementsByTagName("displaymode").item(0);
-        if (mode != null) {
+        if (mode == null) {
+            displayMode = 0;
+        } else {
             String sMode = mode.getChildNodes().item(0).getNodeValue();
             displayMode = Integer.parseInt(sMode);
-        } else {
-            displayMode = 0;
         }
 
         return new Gathering(playerList, displayMode);

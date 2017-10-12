@@ -202,18 +202,7 @@ public class RoundTimerFragment extends FamiliarFragment {
         mTimerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (getFamiliarActivity().mPreferenceAdapter.getRoundTimerEnd() != -1) {
-                    /* Commit the endTime as -1 */
-                    getFamiliarActivity().mPreferenceAdapter.setRoundTimerEnd(-1);
-                    /* Cancel the alarms */
-                    setOrCancelAlarms(getActivity(), 0, false);
-                    /* Stop the ActionBar timer display*/
-                    getFamiliarActivity().stopUpdatingDisplay();
-                    /* Set button text to start again */
-                    mTimerButton.setText(R.string.timer_start);
-                    /* Cancel the notification */
-                    NotificationManagerCompat.from(getActivity()).cancel(TIMER_NOTIFICATION_ID);
-                } else {
+                if (getFamiliarActivity().mPreferenceAdapter.getRoundTimerEnd() == -1) {
                     /* Figure out the end time */
                     int hours = mTimePicker.getHours();
                     int minutes = mTimePicker.getMinutes();
@@ -235,6 +224,17 @@ public class RoundTimerFragment extends FamiliarFragment {
                     getFamiliarActivity().startUpdatingDisplay();
                     /* Set the button text to stop the timer */
                     mTimerButton.setText(R.string.timer_cancel);
+                } else {
+                    /* Commit the endTime as -1 */
+                    getFamiliarActivity().mPreferenceAdapter.setRoundTimerEnd(-1);
+                    /* Cancel the alarms */
+                    setOrCancelAlarms(getActivity(), 0, false);
+                    /* Stop the ActionBar timer display*/
+                    getFamiliarActivity().stopUpdatingDisplay();
+                    /* Set button text to start again */
+                    mTimerButton.setText(R.string.timer_start);
+                    /* Cancel the notification */
+                    NotificationManagerCompat.from(getActivity()).cancel(TIMER_NOTIFICATION_ID);
                 }
             }
         });

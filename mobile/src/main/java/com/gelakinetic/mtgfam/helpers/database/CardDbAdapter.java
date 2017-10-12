@@ -509,10 +509,10 @@ public class CardDbAdapter {
             boolean first = true;
             String selectionStr = "";
             for (long id : ids) {
-                if (!first) {
-                    selectionStr += " OR ";
-                } else {
+                if (first) {
                     first = false;
+                } else {
+                    selectionStr += " OR ";
                 }
                 selectionStr += KEY_ID + "=" + id;
             }
@@ -656,14 +656,14 @@ public class CardDbAdapter {
                 } else {
                     sql += " OR ";
                 }
-                if (cwi.setCode != null && !cwi.setCode.equals("")) {
+                if (cwi.setCode == null || cwi.setCode.equals("")) {
+                    sql += "(" + DATABASE_TABLE_CARDS + "." + KEY_NAME_NO_ACCENT + " = " +
+                            sanitizeString(cwi.mName, true) + ")";
+                } else {
                     sql += "(" + DATABASE_TABLE_CARDS + "." + KEY_NAME + " = " +
                             sanitizeString(cwi.mName, false) +
                             " AND " + DATABASE_TABLE_CARDS + "." + KEY_SET + " = '" +
                             cwi.setCode + "')";
-                } else {
-                    sql += "(" + DATABASE_TABLE_CARDS + "." + KEY_NAME_NO_ACCENT + " = " +
-                            sanitizeString(cwi.mName, true) + ")";
                 }
             }
         }
@@ -682,11 +682,11 @@ public class CardDbAdapter {
             throw new FamiliarDbException(e);
         }
 
-        if (cursor != null) {
-            cursor.moveToFirst();
-        } else {
+        if (cursor == null) {
             return;
         }
+
+        cursor.moveToFirst();
 
         while (!cursor.isAfterLast()) {
             /* Do stuff */

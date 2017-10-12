@@ -216,11 +216,10 @@ public class AutocompleteCursorAdapter extends SimpleCursorAdapter implements Lo
         } catch (Exception e) {
             /* Now that prior failures swap in a null cursor, this should never be called */
             this.swapCursor(null);
-            if (convertView != null) {
-                return convertView;
-            } else {
+            if (convertView == null) {
                 return new View(mFragment.getActivity());
             }
+            return convertView;
         }
     }
 }
