@@ -7,7 +7,7 @@ jobs:
   build:
     docker:
       # specify the version you desire here
-      - image: circleci/android:api-25-alpha
+      - image: circleci/android:api-26-alpha
       
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -37,9 +37,15 @@ jobs:
       - save_cache:
           paths:
             - ~/.m2
+            - ~/.gradle
+            key: jars-{{ checksum "build.gradle"}}-{{ checksum "mobile/build.gradle" }}
           key: v1-dependencies-{{ checksum "build.gradle" }}
         
       # run tests!
       - run: ./gradlew assembleDebug
+      
+      - store_artifacts:
+        path: ~/mobile/build/outputs
+        destinations: commitly
 
 
