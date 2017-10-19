@@ -47,9 +47,9 @@ jobs:
           key: jars-{{ checksum "build.gradle"}}-{{ checksum "mobile/build.gradle" }}
       
       - store_artifacts:
-          path: mobile/build/outputs/*.apk
+          path: mobile/build/outputs
           destination: apks
           
       - store_artifacts:
-          path: mobile/build/reports/**/*.html
+          path: mobile/build/reports
           destination: reports
