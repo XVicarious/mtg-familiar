@@ -45,6 +45,6 @@ jobs:
       
       - store_artifacts:
         path: ~/mobile/build/outputs
-        destinations: commitly
+        destination: commitly
 
 
