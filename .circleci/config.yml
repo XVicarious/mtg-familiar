@@ -32,7 +32,7 @@ jobs:
           - v1-dependencies-
           - jars-{{ checksum "build.gradle" }}-{{ checksum "mobile/build.gradle" }}
 
-      - run: gradle androidDependencies
+      - run: ./gradlew androidDependencies
 
       - save_cache:
           paths:
