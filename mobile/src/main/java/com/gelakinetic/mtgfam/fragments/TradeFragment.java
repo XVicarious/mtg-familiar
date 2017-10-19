@@ -25,6 +25,7 @@ import com.gelakinetic.mtgfam.fragments.dialogs.TradeDialogFragment;
 import com.gelakinetic.mtgfam.helpers.AutocompleteCursorAdapter;
 import com.gelakinetic.mtgfam.helpers.CardHelpers;
 import com.gelakinetic.mtgfam.helpers.MtgCard;
+import com.gelakinetic.mtgfam.helpers.PreferenceAdapter;
 import com.gelakinetic.mtgfam.helpers.PriceFetchRequest;
 import com.gelakinetic.mtgfam.helpers.PriceInfo;
 import com.gelakinetic.mtgfam.helpers.SelectableItemTouchHelper;
@@ -264,7 +265,7 @@ public class TradeFragment extends FamiliarListFragment {
             mCheckboxFoil.setChecked(false);
         }
 
-        sortTrades(getFamiliarActivity().mPreferenceAdapter.getTradeSortOrder());
+        sortTrades(PreferenceAdapter.getTradeSortOrder(getContext()));
 
     }
 
@@ -295,7 +296,7 @@ public class TradeFragment extends FamiliarListFragment {
             SortOrderDialogFragment newFragment = new SortOrderDialogFragment();
             Bundle args = new Bundle();
             args.putString(SortOrderDialogFragment.SAVED_SORT_ORDER,
-                    getFamiliarActivity().mPreferenceAdapter.getTradeSortOrder());
+                    PreferenceAdapter.getTradeSortOrder(getContext()));
             newFragment.setArguments(args);
             newFragment.show(getFragmentManager(), FamiliarActivity.DIALOG_TAG);
         } else {
@@ -343,7 +344,7 @@ public class TradeFragment extends FamiliarListFragment {
         }
 
         /* And resort to the expected order after saving */
-        sortTrades(getFamiliarActivity().mPreferenceAdapter.getTradeSortOrder());
+        sortTrades(PreferenceAdapter.getTradeSortOrder(getContext()));
     }
 
     /**
@@ -364,23 +365,27 @@ public class TradeFragment extends FamiliarListFragment {
             );
             String line;
             while ((line = br.readLine()) != null) {
-                MtgCard card = MtgCard.fromTradeString(line, getActivity());
-                card.setIndex(mOrderAddedIdx++);
+                try {
+                    MtgCard card = MtgCard.fromTradeString(line, getActivity());
+                    card.setIndex(mOrderAddedIdx++);
 
-                if (card.setName == null) {
-                    handleFamiliarDbException(false);
-                    return;
-                }
-                if (card.mSide == LEFT) {
-                    mListLeft.add(card);
-                    if (!card.customPrice) {
-                        loadPrice(card, mListAdapterLeft);
+                    if (card.setName == null) {
+                        handleFamiliarDbException(false);
+                        return;
                     }
-                } else if (card.mSide == RIGHT) {
-                    mListRight.add(card);
-                    if (!card.customPrice) {
-                        loadPrice(card, mListAdapterRight);
+                    if (card.mSide == LEFT) {
+                        mListLeft.add(card);
+                        if (!card.customPrice) {
+                            loadPrice(card, mListAdapterLeft);
+                        }
+                    } else if (card.mSide == RIGHT) {
+                        mListRight.add(card);
+                        if (!card.customPrice) {
+                            loadPrice(card, mListAdapterRight);
+                        }
                     }
+                } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                    // This card line is junk, ignore it
                 }
             }
         } catch (FileNotFoundException e) {
@@ -495,7 +500,7 @@ public class TradeFragment extends FamiliarListFragment {
     public void onResume() {
 
         super.onResume();
-        mPriceSetting = Integer.parseInt(getFamiliarActivity().mPreferenceAdapter.getTradePrice());
+        mPriceSetting = Integer.parseInt(PreferenceAdapter.getTradePrice(getContext()));
         loadTrade(AUTOSAVE_NAME + TRADE_EXTENSION);
 
     }
@@ -628,8 +633,11 @@ public class TradeFragment extends FamiliarListFragment {
                             if (mPriceFetchRequests == 0 && TradeFragment.this.isAdded()) {
                                 getFamiliarActivity().clearLoading();
                             }
-                            sortTrades(getFamiliarActivity().mPreferenceAdapter
-                                    .getTradeSortOrder());
+                            try {
+                                sortTrades(PreferenceAdapter.getTradeSortOrder(getContext()));
+                            } catch (NullPointerException e) {
+                                /* couldn't get the preference, so don't bother sorting */
+                            }
                         }
                     }
             );
@@ -710,7 +718,7 @@ public class TradeFragment extends FamiliarListFragment {
      */
     @Override
     public void receiveSortOrder(String orderByStr) {
-        getFamiliarActivity().mPreferenceAdapter.setTradeSortOrder(orderByStr);
+        PreferenceAdapter.setTradeSortOrder(getContext(), orderByStr);
         sortTrades(orderByStr);
     }
 
