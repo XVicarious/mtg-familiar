@@ -46,8 +46,8 @@ jobs:
       
       - store_artifacts:
           paths:
-              - mobile/build/outputs
-              - mobile/build/reports
+            - mobile/build/outputs
+            - mobile/build/reports
           destination: commitly
 
 
