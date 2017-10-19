@@ -39,9 +39,11 @@ jobs:
           key: jars-{{ checksum "build.gradle"}}-{{ checksum "mobile/build.gradle" }}
           
       # run tests!
+      working_directory: ~/repo/mobile
       - run: ./mobile/gradlew checkstyle
       - run: ./mobile/gradlew pmd
       - run: ./mobile/gradlew findbugs
+      working_directory: ~/repo
       - run: ./gradlew assembleDebug
       
       - store_artifacts:
