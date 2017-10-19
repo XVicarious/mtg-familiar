@@ -28,7 +28,9 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - jars-{{ checksum "build.gradle" }}-{{ checksum "mobile/build.gradle" }}
+            - jars
+            - build
+            #- jars-{{ checksum "build.gradle" }}-{{ checksum "mobile/build.gradle" }}
 
       - run: ./gradlew androidDependencies
 
@@ -43,6 +45,13 @@ jobs:
       - run: ./gradlew :mobile:pmd
       - run: ./gradlew :mobile:findbugs
       - run: ./gradlew assembleDebug
+      
+      - save_cache:
+        paths:
+          - mobile/build/generated
+          - mobile/build/tmp
+          - mobile/build/intermediates
+        key: build
       
       - store_artifacts:
           path: mobile/build/outputs
