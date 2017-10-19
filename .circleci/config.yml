@@ -39,6 +39,7 @@ jobs:
           paths:
             - ~/.m2
             - ~/.gradle
+            - ~/repo
           key: jars-{{ checksum "build.gradle"}}-{{ checksum "mobile/build.gradle" }}
           
       # run tests!
