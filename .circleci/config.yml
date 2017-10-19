@@ -47,11 +47,11 @@ jobs:
       - run: ./gradlew assembleDebug
       
       - save_cache:
-        paths:
-          - mobile/build/generated
-          - mobile/build/tmp
-          - mobile/build/intermediates
-        key: build
+          paths:
+            - mobile/build/generated
+            - mobile/build/tmp
+            - mobile/build/intermediates
+          key: build
       
       - store_artifacts:
           path: mobile/build/outputs
