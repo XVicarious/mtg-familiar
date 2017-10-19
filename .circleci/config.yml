@@ -23,12 +23,12 @@ jobs:
     
     steps:
     
+      - checkout
+    
       # Download and cache dependencies
       - restore_cache:
           keys:
             - jars-{{ checksum "build.gradle" }}-{{ checksum "mobile/build.gradle" }}
-            
-      - checkout
 
       - run: ./gradlew androidDependencies
 
