@@ -45,9 +45,9 @@ jobs:
       - run: ./gradlew assembleDebug
       
       - store_artifacts:
-          paths:
-            - mobile/build/outputs
-            - mobile/build/reports
-          destination: commitly
-
-
+          path: mobile/build/outputs
+          destination: apks
+          
+      - store_artifacts:
+          path: mobile/build/reports
+          destination: reports
