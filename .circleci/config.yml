@@ -25,14 +25,7 @@ jobs:
     
       - checkout
       
-      - run:
-          type: shell
-          command: |
-          MD5SUMS = ''
-          for f in $(find mobile/src/java -name '*.java'); do
-              md5sum $f >> $MD5SUMS
-          done
-          echo $MD5SUMS
+      - run: .circleci/sumsrc.sh
     
       # Download and cache dependencies
       - restore_cache:
