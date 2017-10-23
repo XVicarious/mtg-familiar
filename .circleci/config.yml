@@ -26,10 +26,6 @@ jobs:
       - checkout
         
       - run: sh .circleci/sumsrc.sh
-      
-      - run: md5sum .circleci/md5sum.txt > $MD5SUM
-      
-      - run: echo $MD5SUM
     
       # Download and cache dependencies
       - restore_cache:
