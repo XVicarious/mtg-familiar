@@ -25,7 +25,9 @@ jobs:
     
       - checkout
         
-      - run: sh .circleci/sumsrc.sh
+      - run: chmod +x ~/repo/.circleci/sumsrc.sh
+        
+      - run: ~/repo/.circleci/sumsrc.sh
     
       # Download and cache dependencies
       - restore_cache:
