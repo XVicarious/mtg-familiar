@@ -24,6 +24,15 @@ jobs:
     steps:
     
       - checkout
+      
+      - run:
+          type: shell
+          command: |
+          MD5SUMS = ''
+          for f in $(find mobile/src/java -name '*.java'); do
+              md5sum $f >> $MD5SUMS
+          done
+          echo $MD5SUMS
     
       # Download and cache dependencies
       - restore_cache:
