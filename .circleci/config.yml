@@ -55,7 +55,7 @@ jobs:
       - save_cache:
           paths:
             - mobile/build
-          key: build-{{ checksum "mobile/build" }}
+          key: build-{{ checksum "mobile/build.gradle" }}
       
       - store_artifacts:
           path: mobile/build/outputs
