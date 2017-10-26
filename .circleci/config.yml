@@ -25,18 +25,20 @@ jobs:
     
       - checkout
     
-      # Download and cache dependencies
+      # Download and restore dependency cache
       - restore_cache:
           keys:
             - jars-{{ checksum "build.gradle" }}-{{ checksum "mobile/build.gradle" }}
             - jars-{{ checksum "build.gradle" }}-
             - jars-
             
+      # Download and restore build cache
       - restore_cache:
           keys:
             - build-{{ checksum "mobile/build.gradle" }}
             - build-
 
+      # Update our dependencies
       - run: ./gradlew androidDependencies
           
       # run tests!
