@@ -38,9 +38,9 @@ jobs:
           
       # run tests!
       - run: ./gradlew :mobile:check
-      #- run: ./gradlew :mobile:checkstyle
-      #- run: ./gradlew :mobile:pmd
-      #- run: ./gradlew :mobile:findbugs
+      - run: ./gradlew :mobile:checkstyle
+      - run: ./gradlew :mobile:pmd
+      - run: ./gradlew :mobile:findbugs
       - run: ./gradlew assembleDebug
       
       - save_cache:
