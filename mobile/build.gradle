@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
-//apply plugin: 'pmd'
-//apply plugin: 'checkstyle'
-//apply plugin: 'findbugs'
+apply plugin: 'pmd'
+apply plugin: 'checkstyle'
+apply plugin: 'findbugs'
 apply plugin: 'com.noveogroup.android.check'
 
 //check.dependsOn 'pmd', /*'checkstyle',*/ 'findbugs'
@@ -13,13 +13,47 @@ repositories {
 
 def configDir = "${project.rootDir}/config"
 
-check {
-  checkstyle {
-    config "$configDir/checkstyle/checkstyle.xml"
-  }
-  pmd {
-    config "$configDir/pmd/pmd.xml"
-  }
+task checkstyle(type: Checkstyle, group: "verification") {
+    ignoreFailures = true
+    configFile file("$configDir/checkstyle/checkstyle.xml")
+    configProperties.checkstyleSuppressionsPath = file("$configDir/checkstyle/suppressions.xml").absolutePath
+    source 'src'
+    include '**/*.java'
+    exclude '**/gen/**'
+    classpath = files()
+}
+
+task findbugs(type: FindBugs, dependsOn: "assembleDebug", group: "verification") {
+    ignoreFailures = true
+    effort = "max"
+    reportLevel = "high"
+    excludeFilter = new File("$configDir/findbugs/findbugs.filter.xml")
+    classes = files("${project.rootDir}/mobile/build/intermediates/classes")
+    source 'src'
+    include '**/*.java'
+    exclude '**/gen/**'
+    reports {
+        xml.enabled = false
+        html.enabled = true
+        html {
+            destination "$project.buildDir/reports/findbugs.html"
+        }
+    }
+    classpath = files()
+}
+
+task pmd(type: Pmd, group: "verification") {
+    ignoreFailures = true
+    ruleSetFiles = files("$configDir/pmd/pmd.xml")
+    reports {
+        html.enabled = true
+        html {
+            destination "$project.buildDir/reports/pmd.html"
+        }
+    }
+    source 'src'
+    include '**/*.java'
+    exclude '**/gen/**'
 }
 
 android {
