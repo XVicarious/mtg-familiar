@@ -53,7 +53,7 @@ task pmd(type: Pmd, group: "verification") {
     }
     source 'src'
     include '**/*.java'
-    excludes ['**/gen/**', '**/tokenautocomplete/**']
+    exclude ['**/gen/**', '**/tokenautocomplete/**']
 }
 
 android {
