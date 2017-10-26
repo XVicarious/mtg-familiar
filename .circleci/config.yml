@@ -37,6 +37,7 @@ jobs:
       - run: ./gradlew androidDependencies
           
       # run tests!
+      - run: ./gradlew :mobile:check
       - run: ./gradlew :mobile:checkstyle
       - run: ./gradlew :mobile:pmd
       - run: ./gradlew :mobile:findbugs
