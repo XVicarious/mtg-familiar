@@ -35,7 +35,7 @@ jobs:
       # Download and restore build cache
       - restore_cache:
           keys:
-            - build-{{ checksum "mobile/build.gradle" }}
+            - build-{{ epoch }}
             - build-
 
       # Update our dependencies
@@ -57,7 +57,7 @@ jobs:
       - save_cache:
           paths:
             - mobile/build
-          key: build-{{ checksum "mobile/build.gradle" }}
+          key: build-{{ epoch }}
       
       - store_artifacts:
           path: mobile/build/outputs
