@@ -34,7 +34,7 @@ jobs:
             
       - restore_cache:
           keys:
-            - build-{{ checksum "mobile/build" }}
+            - build-{{ checksum "mobile/build.gradle" }}
             - build-
 
       - run: ./gradlew androidDependencies
