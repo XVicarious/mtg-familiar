@@ -334,11 +334,6 @@ public class FamiliarActivity extends AppCompatActivity {
     InputStream getHttpInputStream(URL url, @Nullable PrintWriter logWriter,
                                    int recursionLevel) throws IOException {
 
-        /* Don't allow infinite recursion */
-        if (recursionLevel > 10) {
-            return null;
-        }
-
         /* Make the URL & connection objects, follow redirects, timeout after 5s */
         HttpURLConnection.setFollowRedirects(true);
         HttpURLConnection connection = (HttpURLConnection) (url).openConnection();
@@ -396,18 +391,18 @@ public class FamiliarActivity extends AppCompatActivity {
                 }
             }
 
-            if (nextUrl != null) {
-                /* If there is a URL to follow, follow it */
+            if (nextUrl != null && recursionLevel < 11) {
+                /* If there is a URL to follow, follow it if the recursion level is below 11 as not to recurr infinitely */
                 return getHttpInputStream(nextUrl, logWriter, recursionLevel + 1);
-            } else {
-                /* Otherwise return null */
-                return null;
             }
+            
+            /* Otherwise return null */
+            return null;
 
-        } else {
-            /* HTTP response is A-OK. Return the inputStream */
-            return connection.getInputStream();
         }
+        
+        /* HTTP response is A-OK. Return the inputStream */
+        return connection.getInputStream();
     }
 
     /**
