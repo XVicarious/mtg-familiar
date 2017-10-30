@@ -12,6 +12,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
     android:background="?attr/selectable_row">
 
     <LinearLayout
@@ -38,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:text="Name" />
+                tools:text="Name" />
 
             <TextView
                 android:id="@+id/cardcost"
@@ -48,7 +49,7 @@
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
                 android:gravity="right"
-                android:text="Cost" />
+                tools:text="Cost" />
 
         </LinearLayout>
 
@@ -66,7 +67,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
-                android:text="Type" />
+                tools:text="Type" />
 
             <TextView
                 android:id="@+id/cardset"
@@ -75,7 +76,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="right"
-                android:text="Set" />
+                tools:text="Set" />
 
         </LinearLayout>
 
@@ -84,7 +85,7 @@
             style="@style/text.medium"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Ability" />
+            tools:text="Ability" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -98,7 +99,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:text="(R)" />
+                tools:text="(R)" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -112,7 +113,7 @@
                     style="@style/text.medium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="P" />
+                    tools:text="P" />
 
                 <TextView
                     android:id="@+id/cardslash"
@@ -126,7 +127,7 @@
                     style="@style/text.medium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="T" />
+                    tools:text="T" />
             </LinearLayout>
 
         </LinearLayout>

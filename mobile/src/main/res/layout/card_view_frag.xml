@@ -10,6 +10,7 @@
 	along with MTG Familiar. If not, see <http://www.gnu.org/licenses/>.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/master_layout"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
@@ -72,7 +73,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
                         android:layout_weight="1"
-                        android:text="Vorinclex, Voice of Hunger" />
+                        tools:text="Vorinclex, Voice of Hunger" />
 
                     <TextView
                         android:id="@+id/cost"
@@ -82,7 +83,7 @@
                         android:layout_gravity="center_vertical"
                         android:layout_weight="1"
                         android:gravity="right"
-                        android:text="6GG" />
+                        tools:text="6GG" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -107,7 +108,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
                         android:gravity="center_vertical"
-                        android:text="Legendary Creature - Human Soldier" />
+                        tools:text="Legendary Creature - Human Soldier" />
                 </LinearLayout>
 
                 <TextView
@@ -117,7 +118,7 @@
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:gravity="right|center_vertical"
-                    android:text="MOR" />
+                    tools:text="MOR" />
 
                 <LinearLayout
                     android:id="@+id/linearLayout4"
@@ -134,7 +135,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="center_vertical"
-                        android:text="{T}: Search your library for a legendary card, reveal that card, and put it into your hand. Then shuffle your library." />
+                        tools:text="{T}: Search your library for a legendary card, reveal that card, and put it into your hand. Then shuffle your library." />
 
                     <TextView
                         android:id="@+id/flavor"
@@ -144,7 +145,7 @@
                         android:layout_height="wrap_content"
                         android:layout_margin="8dp"
                         android:layout_weight="1"
-                        android:text="Neque porro quisquam est qui dolorem ipsum quia dolor sit amet flavor text."
+                        tools:text="Neque porro quisquam est qui dolorem ipsum quia dolor sit amet flavor text."
                         android:textStyle="italic"
                         android:typeface="serif" />
                 </LinearLayout>
@@ -177,14 +178,14 @@
                         style="@style/text.medium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Number" />
+                        tools:text="Number" />
 
                     <TextView
                         android:id="@+id/artist"
                         style="@style/text.medium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Zoltan Boros &amp; Gabor Szikszai" />
+                        tools:text="Zoltan Boros &amp; Gabor Szikszai" />
                 </LinearLayout>
 
                 <TextView
@@ -194,7 +195,7 @@
                     android:layout_height="match_parent"
                     android:layout_gravity="center_vertical|right"
                     android:gravity="center_vertical"
-                    android:text="*/1+*" />
+                    tools:text="*/1+*" />
 
             </LinearLayout>
         </LinearLayout>

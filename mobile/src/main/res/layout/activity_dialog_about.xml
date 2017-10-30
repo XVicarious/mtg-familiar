@@ -26,8 +26,7 @@
             style="@style/text.medium"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:padding="8sp"
-            android:text="TextView" />
+            android:padding="8sp" />
 
         <ImageView
             android:id="@+id/imageview3"
