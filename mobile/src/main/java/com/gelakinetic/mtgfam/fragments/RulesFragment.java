@@ -39,6 +39,7 @@ import com.gelakinetic.mtgfam.helpers.database.FamiliarDbException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -711,7 +712,7 @@ public class RulesFragment extends FamiliarFragment {
 
                 /* Find the first index for each letter in the alphabet by looking at all the items */
                 for (int index = 0; index < items.size(); index++) {
-                    String letter = items.get(index).getHeader().substring(0, 1).toUpperCase();
+                    String letter = items.get(index).getHeader().substring(0, 1).toUpperCase(Locale.ROOT);
                     if (!alphabetLHS.contains(letter)) {
                         alphabetLHS.add(letter);
                         indicesLHS.add(index);

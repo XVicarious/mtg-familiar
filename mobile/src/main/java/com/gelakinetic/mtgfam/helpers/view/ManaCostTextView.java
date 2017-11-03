@@ -22,6 +22,7 @@ import com.gelakinetic.mtgfam.R;
 import com.tokenautocomplete.FilteredArrayAdapter;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 
 public class ManaCostTextView extends ATokenTextView {
     private static final LinkedHashMap<String, BitmapDrawable> MANA_DRAWABLES = new LinkedHashMap<>();
@@ -124,7 +125,7 @@ public class ManaCostTextView extends ATokenTextView {
 
         @Override
         protected boolean keepObject(String obj, String mask) {
-            return obj.toUpperCase().contains(mask.toUpperCase());
+            return obj.toUpperCase(Locale.ROOT).contains(mask.toUpperCase(Locale.ROOT));
         }
     }
 

@@ -384,7 +384,7 @@ public class FamiliarActivity extends AppCompatActivity {
                         logWriter.write("HTML:" + line + '\n');
                     }
                     /* Check for a location */
-                    if (line.toLowerCase().contains("location")) {
+                    if (line.toLowerCase(Locale.ROOT).contains("location")) {
                         nextUrl = new URL(line.split("\\s+")[1]);
                         break;
                     }
@@ -802,7 +802,7 @@ public class FamiliarActivity extends AppCompatActivity {
             assert data != null;
 
             boolean shouldClearFragmentStack = true; /* Clear backstack for deep links */
-            if (data.getAuthority().toLowerCase().contains("gatherer.wizards")) {
+            if (data.getAuthority().toLowerCase(Locale.ROOT).contains("gatherer.wizards")) {
                 try {
                     SQLiteDatabase database = DatabaseManager.getInstance(this, false).openDatabase(false);
                     String queryParam;
@@ -854,8 +854,8 @@ public class FamiliarActivity extends AppCompatActivity {
                     SQLiteDatabase database = DatabaseManager.getInstance(this, false).openDatabase(false);
                     Cursor cursor = null;
                     boolean screenLaunched = false;
-                    if (data.getScheme().toLowerCase().equals("card") &&
-                            data.getAuthority().toLowerCase().equals("multiverseid")) {
+                    if (data.getScheme().toLowerCase(Locale.ROOT).equals("card") &&
+                            data.getAuthority().toLowerCase(Locale.ROOT).equals("multiverseid")) {
                         if (data.getLastPathSegment() == null) {
                             /* Home screen deep link */
                             launchHomeScreen();

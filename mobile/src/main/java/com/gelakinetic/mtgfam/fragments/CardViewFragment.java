@@ -1338,11 +1338,11 @@ public class CardViewFragment extends FamiliarFragment {
 
             final String mtgiExtras = "http://magiccards.info/extras/";
             String picURL;
-            if (mCardType.toLowerCase().contains(getString(R.string.search_Ongoing).toLowerCase()) ||
+            if (mCardType.toLowerCase(Locale.ROOT).contains(getString(R.string.search_Ongoing).toLowerCase(Locale.ROOT)) ||
                     /* extra space to not confuse with planeswalker */
-                    mCardType.toLowerCase().contains(getString(R.string.search_Plane).toLowerCase() + " ") ||
-                    mCardType.toLowerCase().contains(getString(R.string.search_Phenomenon).toLowerCase()) ||
-                    mCardType.toLowerCase().contains(getString(R.string.search_Scheme).toLowerCase())) {
+                    mCardType.toLowerCase(Locale.ROOT).contains(getString(R.string.search_Plane).toLowerCase(Locale.ROOT) + " ") ||
+                    mCardType.toLowerCase(Locale.ROOT).contains(getString(R.string.search_Phenomenon).toLowerCase(Locale.ROOT)) ||
+                    mCardType.toLowerCase(Locale.ROOT).contains(getString(R.string.search_Scheme).toLowerCase(Locale.ROOT))) {
                 switch (mSetCode) {
                     case "PC2":
                         picURL = mtgiExtras + "plane/planechase-2012-edition/" + cardName + ".jpg";

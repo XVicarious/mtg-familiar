@@ -10,6 +10,7 @@ import android.view.View;
 import com.gelakinetic.mtgfam.R;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 public class ColorIndicatorView extends View {
     private static final String COLORS_CHARS[] = {"w", "u", "b", "r", "g"};
@@ -91,7 +92,7 @@ public class ColorIndicatorView extends View {
      * @return The sanitized string
      */
     private static String sanitizeString(String str) {
-        str = str.toLowerCase();
+        str = str.toLowerCase(Locale.ROOT);
         boolean colors[] = new boolean[5];
         Arrays.fill(colors, false);
 

@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
@@ -1117,7 +1118,7 @@ public class CardDbAdapter {
                                         " NOT LIKE \"\")";
                             } else {
                                 statement += "(" + DATABASE_TABLE_CARDS + "." + KEY_COLOR_IDENTITY +
-                                        " NOT LIKE \"%" + criteria.colorIdentity.toUpperCase().charAt(i) + "%\")";
+                                        " NOT LIKE \"%" + criteria.colorIdentity.toUpperCase(Locale.ROOT).charAt(i) + "%\")";
                             }
                             first = false;
                         }
@@ -1234,7 +1235,7 @@ public class CardDbAdapter {
                     statement += " OR ";
                 }
                 statement += DATABASE_TABLE_CARDS + "." + KEY_RARITY + " = "
-                        + (int) criteria.rarity.toUpperCase().charAt(i) + "";
+                        + (int) criteria.rarity.toUpperCase(Locale.ROOT).charAt(i) + "";
             }
             statement += ")";
         }

@@ -31,6 +31,8 @@ import android.support.annotation.NonNull;
 
 import com.gelakinetic.mtgfam.BuildConfig;
 
+import java.util.Locale;
+
 /**
  * Provides access to the card database. Used for the search widget
  */
@@ -94,7 +96,7 @@ public class CardSearchProvider extends ContentProvider {
                         return null;
                         //throw new IllegalArgumentException("selectionArgs must be provided for the Uri: " + uri);
                     }
-                    query = selectionArgs[0].toLowerCase();
+                    query = selectionArgs[0].toLowerCase(Locale.ROOT);
 
                     return CardDbAdapter.getCardsByNamePrefix(query, mDatabase);
                 }
