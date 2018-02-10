@@ -9,6 +9,7 @@ MTG Familiar is an Android app which has a suite of tools to play Magic: The Gat
 - Dice, as random as Java's PRNG
 - Card trader which compares prices for lists of cards
 - A Wishlist
+
 - A configurable round timer, with 5/10/15 minute warnings
 - Searchable, offline comprehensive rules
 - Offline Judge documents (Magic Tournament Rules, Infraction Procedure Guide) and deck counter
