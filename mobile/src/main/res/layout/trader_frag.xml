@@ -58,14 +58,29 @@
                 android:layout_height="1dp"
                 android:background="?attr/colorPrimary_attr" />
 
-            <TextView
-                android:id="@+id/priceTextLeft"
-                style="@style/text.medium"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:text="@string/default_price" />
+                android:orientation="vertical"
+                android:layout_gravity="center">
+
+                <TextView
+                    android:id="@+id/priceTextLeft"
+                    style="@style/text.medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/default_price" />
+
+                <TextView
+                    android:id="@+id/priceDiffLeft"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/default_price" />
+
+            </LinearLayout>
+
 
             <View
                 android:id="@+id/priceDividerLeft"
@@ -116,14 +131,28 @@
                 android:layout_height="1dp"
                 android:background="?attr/colorPrimary_attr" />
 
-            <TextView
-                android:id="@+id/priceTextRight"
-                style="@style/text.medium"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:text="@string/default_price" />
+                android:orientation="vertical"
+                android:layout_gravity="center">
+
+                <TextView
+                    android:id="@+id/priceTextRight"
+                    style="@style/text.medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/default_price" />
+
+                <TextView
+                    android:id="@+id/priceDiffRight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/default_price"/>
+
+            </LinearLayout>
 
             <View
                 android:id="@+id/priceDividerRight"

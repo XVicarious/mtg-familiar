@@ -76,7 +76,7 @@ public abstract class FamiliarListFragment extends FamiliarFragment {
     private EditText mNumberOfField;
     private CheckBox mCheckboxFoil;
     private boolean mCheckboxFoilLocked = false;
-    private final ArrayList<TextView> mTotalPriceFields = new ArrayList<>();
+    protected final ArrayList<TextView> mTotalPriceFields = new ArrayList<>();
     private final ArrayList<View> mTotalPriceDividers = new ArrayList<>();
     private ActionMode mActionMode;
 
