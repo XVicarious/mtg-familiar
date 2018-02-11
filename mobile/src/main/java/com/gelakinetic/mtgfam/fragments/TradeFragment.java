@@ -533,17 +533,19 @@ public class TradeFragment extends FamiliarListFragment {
                 mDifferenceLeft.setVisibility(View.GONE);
                 mTotalPriceFields.get(RIGHT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeMedium);
                 mDifferenceRight.setVisibility(View.VISIBLE);
-                mDifferenceRight.setText(
-                        String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
+                mDifferenceRight.setText(getString(R.string.trade_loss,
+                        String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference))));
             } else if (priceDifference < 0) {
                 mTotalPriceFields.get(RIGHT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeLarge);
                 mDifferenceRight.setVisibility(View.GONE);
                 mTotalPriceFields.get(LEFT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeMedium);
                 mDifferenceLeft.setVisibility(View.VISIBLE);
-                mDifferenceLeft.setText(
-                        String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
+                mDifferenceLeft.setText(getString(R.string.trade_loss,
+                        String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference))));
             } else {
+                mTotalPriceFields.get(RIGHT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeMedium);
                 mDifferenceRight.setVisibility(View.GONE);
+                mTotalPriceFields.get(LEFT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeMedium);
                 mDifferenceLeft.setVisibility(View.GONE);
             }
         }
