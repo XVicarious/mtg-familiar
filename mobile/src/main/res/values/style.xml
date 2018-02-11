@@ -51,11 +51,11 @@
     </style>
 
     <style name="text.medium" parent="TextAppearance.AppCompat">
-        <item name="android:textSize">18sp</item>
+        <item name="android:textSize">@dimen/text_medium</item>
     </style>
 
     <style name="text.large" parent="TextAppearance.AppCompat">
-        <item name="android:textSize">22sp</item>
+        <item name="android:textSize">@dimen/text_large</item>
     </style>
 
     <style name="text.xlarge" parent="TextAppearance.AppCompat">

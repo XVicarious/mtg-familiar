@@ -24,4 +24,8 @@
     <!-- Preference fragment padding, sides -->
     <dimen name="preference_fragment_padding_side">16dp</dimen>
 
+    <!-- Text Sizes, to be expanded? -->
+    <dimen name="text_medium">18sp</dimen>
+    <dimen name="text_large">22sp</dimen>
+
 </resources>

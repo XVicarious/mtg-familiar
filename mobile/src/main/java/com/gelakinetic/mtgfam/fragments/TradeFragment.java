@@ -23,6 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -525,13 +526,19 @@ public class TradeFragment extends FamiliarListFragment {
             /* Update the price differences */
             float priceDifference = ((TradeDataAdapter)listAdapterLeft).getTotalPrice() -
                     ((TradeDataAdapter)listAdapterRight).getTotalPrice();
+            float sizeMedium = getResources().getDimension(R.dimen.text_medium);
+            float sizeLarge = getResources().getDimension(R.dimen.text_large);
             if (priceDifference > 0) {
+                mTotalPriceFields.get(LEFT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeLarge);
                 mDifferenceLeft.setVisibility(View.GONE);
+                mTotalPriceFields.get(RIGHT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeMedium);
                 mDifferenceRight.setVisibility(View.VISIBLE);
                 mDifferenceRight.setText(
                         String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
             } else if (priceDifference < 0) {
+                mTotalPriceFields.get(RIGHT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeLarge);
                 mDifferenceRight.setVisibility(View.GONE);
+                mTotalPriceFields.get(LEFT).setTextSize(TypedValue.COMPLEX_UNIT_PX, sizeMedium);
                 mDifferenceLeft.setVisibility(View.VISIBLE);
                 mDifferenceLeft.setText(
                         String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
@@ -780,12 +787,12 @@ public class TradeFragment extends FamiliarListFragment {
             float total = 0;
             for (int i = 0; i < getItemCount(); i++) {
                 try {
-                    total += getItem(i).price;
+                    total += getItem(i).price * getItem(i).numberOf;
                 } catch (NullPointerException npe) {
                     // so what?
                 }
             }
-            return total;
+            return total / 100.0f;
         }
     }
 }
