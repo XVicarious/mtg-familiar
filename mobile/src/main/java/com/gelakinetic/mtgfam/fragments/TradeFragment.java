@@ -74,10 +74,12 @@ public class TradeFragment extends FamiliarListFragment {
     private static final String AUTOSAVE_NAME = "autosave";
 
     /* Left List and Company */
+    public CardDataAdapter listAdapterLeft;
     public ArrayList<MtgCard> mListLeft;
     public TextView mDifferenceLeft;
 
     /* Right List and Company */
+    public CardDataAdapter listAdapterRight;
     public ArrayList<MtgCard> mListRight;
     public TextView mDifferenceRight;
 
@@ -109,11 +111,11 @@ public class TradeFragment extends FamiliarListFragment {
         assert myFragmentView != null;
 
         mListLeft = new ArrayList<>();
-        CardDataAdapter listAdapterLeft = new TradeDataAdapter(mListLeft, LEFT);
+        listAdapterLeft = new TradeDataAdapter(mListLeft, LEFT);
         mDifferenceLeft = myFragmentView.findViewById(R.id.priceDiffLeft);
 
         mListRight = new ArrayList<>();
-        CardDataAdapter listAdapterRight = new TradeDataAdapter(mListRight, RIGHT);
+        listAdapterRight = new TradeDataAdapter(mListRight, RIGHT);
         mDifferenceRight = myFragmentView.findViewById(R.id.priceDiffRight);
 
         /* Call to set up our shared UI elements */
@@ -493,8 +495,8 @@ public class TradeFragment extends FamiliarListFragment {
                                 + " (" + totalCards + ")";
                 setTotalPrice(leftPrice, color, TradeFragment.LEFT);
             }
-            float totalPriceRight = 0;
             if (side == RIGHT || side == BOTH) {
+                float totalPrice = 0;
                 int totalCards = 0;
                 boolean hasBadValues = false;
                 /* Iterate through the list and either sum the price or mark it as "bad,"
@@ -502,7 +504,7 @@ public class TradeFragment extends FamiliarListFragment {
                 for (MtgCard data : mListRight) {
                     totalCards += data.numberOf;
                     if (data.hasPrice()) {
-                        totalPriceRight += data.numberOf * (data.price / 100.0f);
+                        totalPrice += data.numberOf * (data.price / 100.0f);
                     } else {
                         hasBadValues = true;
                     }
@@ -515,28 +517,30 @@ public class TradeFragment extends FamiliarListFragment {
                                 getResourceIdFromAttr(R.attr.color_text)
                         );
                 final String rightPrice =
-                        String.format(Locale.US, PRICE_FORMAT, totalPriceRight)
+                        String.format(Locale.US, PRICE_FORMAT, totalPrice)
                                 + " (" + totalCards + ")";
                 setTotalPrice(rightPrice, color, TradeFragment.RIGHT);
             }
+
             /* Update the price differences */
-            double priceDifference = totalPriceLeft - totalPriceRight;
-            int leftColor = ContextCompat.getColor(getContext(), getResourceIdFromAttr(R.attr.color_text));
-            int rightColor = ContextCompat.getColor(getContext(), getResourceIdFromAttr(R.attr.color_text));
+            float priceDifference = ((TradeDataAdapter)listAdapterLeft).getTotalPrice() -
+                    ((TradeDataAdapter)listAdapterRight).getTotalPrice();
             if (priceDifference > 0) {
-                leftColor = ContextCompat.getColor(getContext(), R.color.material_green_500);
-                rightColor = ContextCompat.getColor(getContext(), R.color.material_red_500);
+                mDifferenceLeft.setVisibility(View.GONE);
+                mDifferenceRight.setVisibility(View.VISIBLE);
+                mDifferenceRight.setText(
+                        String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
             } else if (priceDifference < 0) {
-                leftColor = ContextCompat.getColor(getContext(), R.color.material_red_500);
-                rightColor = ContextCompat.getColor(getContext(), R.color.material_green_500);
+                mDifferenceRight.setVisibility(View.GONE);
+                mDifferenceLeft.setVisibility(View.VISIBLE);
+                mDifferenceLeft.setText(
+                        String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
+            } else {
+                mDifferenceRight.setVisibility(View.GONE);
+                mDifferenceLeft.setVisibility(View.GONE);
             }
-            mDifferenceLeft.setTextColor(leftColor);
-            mDifferenceLeft.setText(String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
-            mDifferenceRight.setTextColor(rightColor);
-            mDifferenceRight.setText(String.format(Locale.US, PRICE_FORMAT, Math.abs(priceDifference)));
         }
     }
-
 
     @Override
     public boolean shouldShowPrice() {
@@ -766,6 +770,22 @@ public class TradeFragment extends FamiliarListFragment {
                 holder.mCardPrice.setTextColor(ContextCompat.getColor(getContext(),
                         R.color.material_red_500));
             }
+        }
+
+        /**
+         * Get the total price of the list in this adapter.
+         * @return a float of the total price of the adapter.
+         */
+        float getTotalPrice() {
+            float total = 0;
+            for (int i = 0; i < getItemCount(); i++) {
+                try {
+                    total += getItem(i).price;
+                } catch (NullPointerException npe) {
+                    // so what?
+                }
+            }
+            return total;
         }
     }
 }
