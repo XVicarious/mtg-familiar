@@ -48,16 +48,10 @@ import com.gelakinetic.mtgfam.helpers.database.FamiliarDbHandle;
 import com.gelakinetic.mtgfam.helpers.tcgp.MarketPriceInfo;
 import com.gelakinetic.mtgfam.helpers.util.FragmentHelpers;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -151,34 +145,46 @@ public class CardHelpers {
                     CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_NUMBER,
                     CardDbAdapter.DATABASE_TABLE_SETS + "." + CardDbAdapter.KEY_NAME), true, false, db);
 
-            Set<String> foilSets;
-            foilSets = CardDbAdapter.getFoilSets(db);
+            Set<String> foilSets = CardDbAdapter.getFoilSets(db);
 
             /* For each card, add it to the wishlist view */
             while (!cards.isAfterLast()) {
                 String setCode = cards.getString(cards.getColumnIndex(CardDbAdapter.KEY_SET));
                 String setName = cards.getString(cards.getColumnIndex(CardDbAdapter.KEY_NAME));
 
-                /* Inflate a row and fill it with stuff */
-                View listDialogRow = createDialogRow(
-                        fragment,
-                        setName,
-                        targetCardNumberOfs.get(setCode),
-                        false,
-                        linearLayout);
-                linearLayout.addView(listDialogRow);
-                potentialSetCodes.add(setCode);
-
-                /* If this card has a foil version, add that too */
-                if (foilSets.contains(setCode)) {
-                    View wishlistRowFoil = createDialogRow(
+                if (targetFoilCardNumberOfs.keySet().contains(setCode) && !foilSets.contains(setCode)) {
+                    // The card is foil, but the set isn't. This happens for foil-only sets like Masterpieces
+                    // Add a non-foil row
+                    View wishlistRow = createDialogRow(
                             fragment,
                             setName,
                             targetFoilCardNumberOfs.get(setCode),
-                            true,
+                            false,
                             linearLayout);
-                    linearLayout.addView(wishlistRowFoil);
+                    linearLayout.addView(wishlistRow);
                     potentialSetCodes.add(setCode);
+                } else {
+                    /* Inflate a row and fill it with stuff */
+                    View listDialogRow = createDialogRow(
+                            fragment,
+                            setName,
+                            targetCardNumberOfs.get(setCode),
+                            false,
+                            linearLayout);
+                    linearLayout.addView(listDialogRow);
+                    potentialSetCodes.add(setCode);
+
+                    /* If this card has a foil version, add that too */
+                    if (foilSets.contains(setCode)) {
+                        View wishlistRowFoil = createDialogRow(
+                                fragment,
+                                setName,
+                                targetFoilCardNumberOfs.get(setCode),
+                                true,
+                                linearLayout);
+                        linearLayout.addView(wishlistRowFoil);
+                        potentialSetCodes.add(setCode);
+                    }
                 }
 
                 cards.moveToNext();
@@ -195,13 +201,13 @@ public class CardHelpers {
         MaterialDialog.SingleButtonCallback onPositiveCallback = (dialog, which) -> {
 
             ArrayList<MtgCard> list;
+            ArrayList<String> nonFoilSets = null;
 
             try {
                 if (isWishlistDialog || isCardViewDialog || isResultListDialog) {
                     /* Read the wishlist */
-                    list = new ArrayList<>();
                     ArrayList<MtgCard> wishlist = WishlistHelpers.ReadWishlist(activity, false);
-                    list.addAll(wishlist);
+                    list = new ArrayList<>(wishlist);
                 } else {
                     list = DecklistHelpers.ReadDecklist(
                             activity,
@@ -211,6 +217,16 @@ public class CardHelpers {
                 }
             } catch (FamiliarDbException e) {
                 return;
+            }
+
+            FamiliarDbHandle handle = new FamiliarDbHandle();
+            try {
+                SQLiteDatabase database = DatabaseManager.openDatabase(activity, false, handle);
+                nonFoilSets = CardDbAdapter.getNonFoilSets(database);
+            } catch (SQLiteException | FamiliarDbException | IllegalStateException ignored) {
+                nonFoilSets = new ArrayList<>();
+            } finally {
+                DatabaseManager.closeDatabase(activity, handle);
             }
 
             /* Add the cards listed in the dialog to the wishlist */
@@ -228,17 +244,17 @@ public class CardHelpers {
                 } catch (NumberFormatException e) {
                     numberOf = 0;
                 }
-                try {
-                    MtgCard card = new MtgCard(mCardName, potentialSetCodes.get(i), isFoil, numberOf, isSideboard);
+                MtgCard card = new MtgCard(mCardName, potentialSetCodes.get(i), isFoil, numberOf, isSideboard);
 
-                    /* Look through the wishlist for each card, set the numberOf or remove
-                     * it if it exists, or add the card if it doesn't */
-                    boolean added = false;
-                    for (int j = 0; j < list.size(); j++) {
-                        if (card.getName().equals(list.get(j).getName())
-                                && card.isSideboard() == list.get(j).isSideboard()
-                                && card.getExpansion().equals(list.get(j).getExpansion())
-                                && card.mIsFoil == list.get(j).mIsFoil) {
+                /* Look through the wishlist for each card, set the numberOf or remove
+                 * it if it exists, or add the card if it doesn't */
+                boolean added = false;
+                for (int j = 0; j < list.size(); j++) {
+                    if (card.getName().equals(list.get(j).getName())
+                            && card.isSideboard() == list.get(j).isSideboard()
+                            && card.getExpansion().equals(list.get(j).getExpansion())) {
+                        if (card.mIsFoil == list.get(j).mIsFoil ||
+                                nonFoilSets.contains(card.getExpansion())) {
                             if (card.mNumberOf == 0) {
                                 list.remove(j);
                                 j--;
@@ -248,18 +264,15 @@ public class CardHelpers {
                             added = true;
                         }
                     }
-                    if (!added && card.mNumberOf > 0) {
-                        list.add(card);
-                    }
-                } catch (InstantiationException e) {
-                    /* Eat it */
+                }
+                if (!added && card.mNumberOf > 0) {
+                    list.add(card);
                 }
             }
 
             if (isWishlistDialog || isCardViewDialog || isResultListDialog) {
-                ArrayList<MtgCard> wishlist = new ArrayList<>();
                 /* Turn it back in to a plain ArrayList */
-                wishlist.addAll(list);
+                ArrayList<MtgCard> wishlist = new ArrayList<>(list);
                 /* Write the wishlist */
                 WishlistHelpers.WriteWishlist(fragment.getActivity(), wishlist);
                 /* notify the fragment of a change in the wishlist */
@@ -571,7 +584,7 @@ public class CardHelpers {
         @Override
         public int compare(CompressedDecklistInfo card1, CompressedDecklistInfo card2) {
 
-            return Boolean.compare(card1.isSideboard(), card2.isSideboard());
+            return Boolean.compare(card1.mIsSideboard, card2.mIsSideboard);
 
         }
 
@@ -608,127 +621,4 @@ public class CardHelpers {
         }
 
     }
-
-    /**
-     * Generates a CSV from a list of {@link MtgCard}, with the given headers.
-     * @param mtgCards a list of MtgCards.
-     * @param csvHeader the csv headers as a string, as they appear in the csv
-     * @return a CSV formatted String of the cards from the list.
-     */
-    public static String cardListToCSV(List<? extends MtgCard> mtgCards, String csvHeader) {
-        StringBuilder csvFile = new StringBuilder(csvHeader);
-        for (MtgCard card : mtgCards) {
-            csvFile.append(card.mNumberOf).append(",");
-            csvFile.append(card.getName()).append(",");
-            /* todo: Unify Edition Names
-             * we need to check set names, they aren't exactly uniformly named in the databases
-             * for the websites
-             */
-            csvFile.append(card.mSetName).append(",");
-            csvFile.append(card.mIsFoil ? "F" : "").append("\n");
-        }
-        return csvFile.toString();
-    }
-
-    /**
-     * Generate a default CSV from a list of {@link MtgCard}
-     * @param mtgCards a list of MtgCards.
-     * @return a CSV formatted String of the cards from the list.
-     */
-    public static String cardListToCSV(List<? extends MtgCard> mtgCards) {
-        final String csvHeader = "Tradelist Count,Name,Edition,Foil\n";
-        return cardListToCSV(mtgCards, csvHeader);
-    }
-
-    /**
-     * Generate a .dec formatted string from a list of MtgCards
-     * @param mtgCards a list of MtgCards or compatible formats eg. {@link CompressedCardInfo}
-     * @return a string formatted as per .dec file format guidelines
-     */
-    public static String cardListToDec(List<? extends MtgCard> mtgCards) {
-        StringBuilder deck = new StringBuilder(30);
-        deck.append("// Generated by MTGFamiliar\n");
-        for (MtgCard card : mtgCards) {
-            if (!"".equals(card.getName())) {
-                if (card instanceof CompressedDecklistInfo && card.isSideboard()) {
-                    deck.append("SB: ")
-                            .append(((CompressedDecklistInfo) card).getTotalNumber())
-                            .append(' ')
-                            .append(card.getName())
-                            .append('\n');
-                    continue;
-                }
-                deck.append(card instanceof CompressedCardInfo ?
-                        ((CompressedCardInfo)card).getTotalNumber() : card.mNumberOf)
-                        .append(' ')
-                        .append(card.getName())
-                        .append('\n');
-            }
-        }
-        return deck.toString();
-    }
-
-    /**
-     * Turn a dec file into a deck list
-     *
-     * @param decFile the dec file to parse
-     * @return a List of CompressedDecklistInfo based on the dec file
-     */
-    public static List<CompressedDecklistInfo> decToDecklist(File decFile) {
-        List<CompressedDecklistInfo> deckList = new ArrayList<>();
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(decFile));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                // todo: Parse comment lines?
-                // mtgtop8 has comment lines for deck name, pilot name, and format
-                // do we want to add these to the deck list?
-                if (Character.isDigit(line.charAt(0)) || line.startsWith("SB:")) {
-                    boolean isSideboard = false;
-                    int numberOf;
-                    String cardName = null;
-                    String setName = null;
-                    if (line.startsWith("SB:")) {
-                        isSideboard = true;
-                        line = line.substring(3).trim();
-                    }
-                    int firstSpace = line.indexOf(' ');
-                    numberOf = Integer.valueOf(line.substring(0, firstSpace).trim());
-                    line = line.substring(firstSpace).trim();
-                    int bracketIndex = line.indexOf('[');
-                    if (bracketIndex >= 0) {
-                        int endBracket = line.indexOf(']');
-                        // todo: MtgCard takes a set code, but this can be a set name, fix it
-                        setName = line.substring(bracketIndex + 1, line.indexOf(']'));
-                        if (bracketIndex > 0) {
-                            cardName = line.substring(0, bracketIndex).trim();
-                        } else {
-                            cardName = line.substring(endBracket + 1).trim();
-                        }
-                    }
-                    try {
-                        deckList.add(
-                                new CompressedDecklistInfo(
-                                        cardName,
-                                        setName,
-                                        false,
-                                        numberOf,
-                                        isSideboard
-                                )
-                        );
-                    } catch (InstantiationException ie) {
-                        // Just don't add the card.
-                    }
-                }
-            }
-        } catch (FileNotFoundException fnf) {
-            return null; // todo: Clarify what this value should be
-            // Is this correct? Should I return an empty list instead? Or should it return whatever
-            // it could pick up?
-        } catch (IOException ioe) {
-            return null; // todo: see line ~717
-        } // todo: Catch, log, finally return deckList?
-        return deckList;
-    }
-
 }

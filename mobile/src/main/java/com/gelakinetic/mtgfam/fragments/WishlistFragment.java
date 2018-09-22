@@ -20,6 +20,8 @@
 package com.gelakinetic.mtgfam.fragments;
 
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
@@ -49,7 +51,9 @@ import com.gelakinetic.mtgfam.helpers.SnackbarWrapper;
 import com.gelakinetic.mtgfam.helpers.WishlistHelpers;
 import com.gelakinetic.mtgfam.helpers.WishlistHelpers.CompressedWishlistInfo;
 import com.gelakinetic.mtgfam.helpers.database.CardDbAdapter;
+import com.gelakinetic.mtgfam.helpers.database.DatabaseManager;
 import com.gelakinetic.mtgfam.helpers.database.FamiliarDbException;
+import com.gelakinetic.mtgfam.helpers.database.FamiliarDbHandle;
 import com.gelakinetic.mtgfam.helpers.tcgp.MarketPriceInfo;
 
 import java.util.ArrayList;
@@ -94,13 +98,14 @@ public class WishlistFragment extends FamiliarListFragment {
         };
 
         /* Make sure to initialize shared members */
-        initializeMembers(
-                myFragmentView,
-                new int[]{R.id.cardlist},
-                new CardDataAdapter[]{new WishlistDataAdapter(mCompressedWishlist)},
-                new int[]{R.id.priceText}, new int[]{R.id.divider_total_price},
-                R.menu.action_mode_menu, addCardListener);
-
+        synchronized (mCompressedWishlist) {
+            initializeMembers(
+                    myFragmentView,
+                    new int[]{R.id.cardlist},
+                    new CardDataAdapter[]{new WishlistDataAdapter(mCompressedWishlist)},
+                    new int[]{R.id.priceText}, new int[]{R.id.divider_total_price},
+                    R.menu.action_mode_menu, addCardListener);
+        }
         myFragmentView.findViewById(R.id.add_card).setOnClickListener(view -> addCardToWishlist());
 
         return myFragmentView;
@@ -111,7 +116,9 @@ public class WishlistFragment extends FamiliarListFragment {
         super.onPause();
         /* unsort, then save the wishlist */
         sortWishlist(SortOrderDialogFragment.KEY_ORDER + " " + SortOrderDialogFragment.SQL_ASC);
-        WishlistHelpers.WriteCompressedWishlist(getActivity(), mCompressedWishlist);
+        synchronized (mCompressedWishlist) {
+            WishlistHelpers.WriteCompressedWishlist(getActivity(), mCompressedWishlist);
+        }
     }
 
     /**
@@ -129,25 +136,37 @@ public class WishlistFragment extends FamiliarListFragment {
             return;
         }
 
+        ArrayList<String> nonFoilSets;
+        FamiliarDbHandle handle = new FamiliarDbHandle();
+        try {
+            SQLiteDatabase database = DatabaseManager.openDatabase(getContext(), false, handle);
+            nonFoilSets = CardDbAdapter.getNonFoilSets(database);
+        } catch (SQLiteException | FamiliarDbException | IllegalStateException ignored) {
+            nonFoilSets = new ArrayList<>();
+        } finally {
+            DatabaseManager.closeDatabase(getContext(), handle);
+        }
+
         try {
             MtgCard card = new MtgCard(getActivity(), name, null, checkboxFoilIsChecked(), Integer.parseInt(numberOf));
             CompressedWishlistInfo wrapped = new CompressedWishlistInfo(card, 0);
 
             /* Add it to the wishlist, either as a new CompressedWishlistInfo, or to an existing one */
-            if (mCompressedWishlist.contains(wrapped)) {
-                CompressedWishlistInfo cwi = mCompressedWishlist.get(mCompressedWishlist.indexOf(wrapped));
-                boolean added = false;
-                for (IndividualSetInfo isi : cwi.mInfo) {
-                    if (isi.mSetCode.equals(card.getExpansion()) && isi.mIsFoil.equals(card.mIsFoil)) {
-                        added = true;
-                        isi.mNumberOf++;
+            synchronized (mCompressedWishlist) {
+                if (mCompressedWishlist.contains(wrapped)) {
+                    CompressedWishlistInfo cwi = mCompressedWishlist.get(mCompressedWishlist.indexOf(wrapped));
+                    boolean added = false;
+                    for (IndividualSetInfo isi : cwi.mInfo) {
+                        if (isi.mSetCode.equals(card.getExpansion()) &&
+                                (isi.mIsFoil.equals(card.mIsFoil) || nonFoilSets.contains(isi.mSetCode))) {
+                            added = true;
+                            isi.mNumberOf++;
+                        }
                     }
-                }
-                if (!added) {
-                    cwi.add(card);
-                }
-            } else {
-                synchronized (mCompressedWishlist) {
+                    if (!added) {
+                        cwi.add(card);
+                    }
+                } else {
                     mCompressedWishlist.add(new CompressedWishlistInfo(card, mOrderAddedIdx++));
                 }
             }
@@ -292,8 +311,10 @@ public class WishlistFragment extends FamiliarListFragment {
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, R.string.wishlist_share_title);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, WishlistHelpers.GetSharableWishlist(mCompressedWishlist, getActivity(),
-                        mShowCardInfo, mShowIndividualPrices, getPriceSetting()));
+                synchronized (mCompressedWishlist) {
+                    sendIntent.putExtra(Intent.EXTRA_TEXT, WishlistHelpers.GetSharableWishlist(mCompressedWishlist, getActivity(),
+                            mShowCardInfo, mShowIndividualPrices, getPriceSetting()));
+                }
                 sendIntent.setType("text/plain");
 
                 try {
@@ -344,19 +365,21 @@ public class WishlistFragment extends FamiliarListFragment {
 
     @Override
     protected void onCardPriceLookupFailure(MtgCard data, Throwable exception) {
-        for (CompressedWishlistInfo cwi : mCompressedWishlist) {
-            if (cwi.getName().equals(data.getName())) {
-                /* Find all foil and non foil compressed items with the same set code */
-                for (IndividualSetInfo isi : cwi.mInfo) {
-                    if (isi.mSetCode.equals(data.getExpansion())) {
-                        /* Set the price as null and the message as the exception */
-                        if (null != exception.getLocalizedMessage()) {
-                            isi.mMessage = exception.getLocalizedMessage();
-                        } else {
-                            isi.mMessage = exception.getClass().getSimpleName();
+        synchronized (mCompressedWishlist) {
+            for (CompressedWishlistInfo cwi : mCompressedWishlist) {
+                if (cwi.getName().equals(data.getName())) {
+                    /* Find all foil and non foil compressed items with the same set code */
+                    for (IndividualSetInfo isi : cwi.mInfo) {
+                        if (isi.mSetCode.equals(data.getExpansion())) {
+                            /* Set the price as null and the message as the exception */
+                            if (null != exception.getLocalizedMessage()) {
+                                isi.mMessage = exception.getLocalizedMessage();
+                            } else {
+                                isi.mMessage = exception.getClass().getSimpleName();
+                            }
+                            isi.mPrice = null;
+                            return;
                         }
-                        isi.mPrice = null;
-                        return;
                     }
                 }
             }
@@ -396,11 +419,12 @@ public class WishlistFragment extends FamiliarListFragment {
     public void updateTotalPrices(int side) {
         if (shouldShowPrice()) {
             float totalPrice = 0;
-
-            for (CompressedWishlistInfo cwi : mCompressedWishlist) {
-                for (IndividualSetInfo isi : cwi.mInfo) {
-                    if (isi.mPrice != null) {
-                        totalPrice += (isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting()) * isi.mNumberOf);
+            synchronized (mCompressedWishlist) {
+                for (CompressedWishlistInfo cwi : mCompressedWishlist) {
+                    for (IndividualSetInfo isi : cwi.mInfo) {
+                        if (isi.mPrice != null) {
+                            totalPrice += (isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting()).price * isi.mNumberOf);
+                        }
                     }
                 }
             }
@@ -476,7 +500,9 @@ public class WishlistFragment extends FamiliarListFragment {
         public void onClickNotSelectMode(View view, int position) {
             // Make sure the wishlist is written first in the proper order
             sortWishlist(SortOrderDialogFragment.KEY_ORDER + " " + SortOrderDialogFragment.SQL_ASC);
-            WishlistHelpers.WriteCompressedWishlist(getActivity(), mCompressedWishlist);
+            synchronized (mCompressedWishlist) {
+                WishlistHelpers.WriteCompressedWishlist(getActivity(), mCompressedWishlist);
+            }
             sortWishlist(PreferenceAdapter.getWishlistSortOrder(getContext()));
 
             // Then show the dialog
@@ -514,7 +540,9 @@ public class WishlistFragment extends FamiliarListFragment {
         protected void onItemRemovedFinal() {
             // Unsort, save, then sort the wishlist
             sortWishlist(SortOrderDialogFragment.KEY_ORDER + " " + SortOrderDialogFragment.SQL_ASC);
-            WishlistHelpers.WriteCompressedWishlist(getActivity(), mCompressedWishlist);
+            synchronized (mCompressedWishlist) {
+                WishlistHelpers.WriteCompressedWishlist(getActivity(), mCompressedWishlist);
+            }
             sortWishlist(PreferenceAdapter.getWishlistSortOrder(getContext()));
         }
 
@@ -629,6 +657,23 @@ public class WishlistFragment extends FamiliarListFragment {
                 ((TextView) setRow.findViewById(R.id.wishlistRowSet)).setTextColor(
                         ContextCompat.getColor(getContext(), getResourceIdFromAttr(color)));
 
+                /* Show individual prices and number of each card, or message if price does not exist, if desired */
+                TextView priceText = setRow.findViewById(R.id.wishlistRowPrice);
+                if (mShowIndividualPrices) {
+                    double price;
+                    if (isi.mPrice == null || (price = isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting()).price) == 0) {
+                        priceText.setText(String.format(Locale.US, "%dx %s", isi.mNumberOf, isi.mMessage));
+                        priceText.setTextColor(ContextCompat.getColor(getContext(), R.color.material_red_500));
+                    } else {
+                        priceText.setText(String.format(Locale.US, "%dx " + PRICE_FORMAT, isi.mNumberOf, price));
+                        priceText.setTextColor(ContextCompat.getColor(getContext(), getResourceIdFromAttr(R.attr.color_text)));
+                        isi.mIsFoil = isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting()).isFoil;
+                    }
+                } else {
+                    /* Just show the number of */
+                    priceText.setText("x" + isi.mNumberOf);
+                }
+
                 /* Show or hide the foil indicator */
                 if (isi.mIsFoil) {
                     setRow.findViewById(R.id.wishlistSetRowFoil).setVisibility(View.VISIBLE);
@@ -636,21 +681,6 @@ public class WishlistFragment extends FamiliarListFragment {
                     setRow.findViewById(R.id.wishlistSetRowFoil).setVisibility(View.GONE);
                 }
 
-                /* Show individual prices and number of each card, or message if price does not exist, if desired */
-                TextView priceText = setRow.findViewById(R.id.wishlistRowPrice);
-                if (mShowIndividualPrices) {
-                    double price;
-                    if (isi.mPrice == null || (price = isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting())) == 0) {
-                        priceText.setText(String.format(Locale.US, "%dx %s", isi.mNumberOf, isi.mMessage));
-                        priceText.setTextColor(ContextCompat.getColor(getContext(), R.color.material_red_500));
-                    } else {
-                        priceText.setText(String.format(Locale.US, "%dx " + PRICE_FORMAT, isi.mNumberOf, price));
-                        priceText.setTextColor(ContextCompat.getColor(getContext(), getResourceIdFromAttr(R.attr.color_text)));
-                    }
-                } else {
-                    /* Just show the number of */
-                    priceText.setText("x" + isi.mNumberOf);
-                }
                 /* Add the view to the linear layout */
                 holder.mWishlistSets.addView(setRow);
             }

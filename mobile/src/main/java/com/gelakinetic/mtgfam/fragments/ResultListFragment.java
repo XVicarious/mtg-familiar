@@ -58,7 +58,6 @@ import java.util.Random;
 public class ResultListFragment extends FamiliarFragment {
 
     /* Constants for bundled arguments */
-    private static final String CARD_ID = "id";
     public static final String CARD_ID_0 = "id0";
     public static final String CARD_ID_1 = "id1";
     public static final String CARD_ID_2 = "id2";
@@ -284,10 +283,7 @@ public class ResultListFragment extends FamiliarFragment {
 
         mListView.setOnItemLongClickListener((adapterView, view, i, l) -> {
             String cardName = ((TextView) view.findViewById(R.id.card_name)).getText().toString();
-            String cardSet = null;
-            if (view.findViewById(R.id.cardset).getVisibility() == View.VISIBLE) {
-                cardSet = ((TextView) view.findViewById(R.id.cardset)).getText().toString();
-            }
+            String cardSet = ((TextView) view.findViewById(R.id.cardset)).getText().toString();
             showDialog(ResultListDialogFragment.QUICK_ADD, cardName, cardSet);
             return true;
         });
@@ -295,34 +291,20 @@ public class ResultListFragment extends FamiliarFragment {
         return myFragmentView;
     }
 
+    /**
+     * Search the database for cards and store the result in mCursor, a global variable
+     *
+     * @param args     A bundle which may contain card IDs. If it does not, then use
+     *                 PreferenceAdapter.getSearchCriteria() to get parameters to search with
+     * @param database The database to search
+     * @throws FamiliarDbException If there is a database error
+     */
     private void doSearch(Bundle args, SQLiteDatabase database) throws FamiliarDbException {
         long id;
-        /* This is just the multiverse ID, from a TutorCards search */
-        if ((id = args.getLong(CARD_ID)) != 0L) {
-            mCursor = CardDbAdapter.fetchCardByMultiverseId(id, new String[]{
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_ID,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_NAME,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_SET,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_SUPERTYPE,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_SUBTYPE,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_RARITY,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_MANACOST,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_CMC,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_POWER,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_TOUGHNESS,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_LOYALTY,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_ABILITY,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_FLAVOR,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_ARTIST,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_NUMBER,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_COLOR,
-                    CardDbAdapter.DATABASE_TABLE_CARDS + "." + CardDbAdapter.KEY_MULTIVERSEID
-            }, database);
-        }
         /* If "id0" exists, then it's three cards and they should be merged
          * Otherwise, do a search with the given criteria
          */
-        else if ((id = args.getLong(CARD_ID_0)) != 0L) {
+        if ((id = args.getLong(CARD_ID_0)) != 0L) {
             long id1 = args.getLong(CARD_ID_1);
             long id2 = args.getLong(CARD_ID_2);
             mCursor = CardDbAdapter.fetchCards(new long[]{id, id1, id2},
@@ -335,7 +317,7 @@ public class ResultListFragment extends FamiliarFragment {
                     CardDbAdapter.KEY_ABILITY, CardDbAdapter.KEY_POWER, CardDbAdapter.KEY_TOUGHNESS, CardDbAdapter.KEY_LOYALTY,
                     CardDbAdapter.KEY_NUMBER, CardDbAdapter.KEY_CMC, CardDbAdapter.KEY_COLOR};
 
-            SearchCriteria criteria = (SearchCriteria) args.getSerializable(SearchViewFragment.CRITERIA);
+            SearchCriteria criteria = PreferenceAdapter.getSearchCriteria(getContext());
             assert criteria != null; /* Because Android Studio */
             boolean consolidate = (criteria.setLogic == CardDbAdapter.MOST_RECENT_PRINTING ||
                     criteria.setLogic == CardDbAdapter.FIRST_PRINTING);
@@ -364,14 +346,13 @@ public class ResultListFragment extends FamiliarFragment {
         if (mCursor != null) {
             ArrayList<String> fromList = new ArrayList<>();
             ArrayList<Integer> toList = new ArrayList<>();
+            // Always get name, set, and rarity. This is for the wishlist quick add
             fromList.add(CardDbAdapter.KEY_NAME);
             toList.add(R.id.card_name);
-            if (PreferenceAdapter.getSetPref(getContext())) {
-                fromList.add(CardDbAdapter.KEY_SET);
-                toList.add(R.id.cardset);
-                fromList.add(CardDbAdapter.KEY_RARITY);
-                toList.add(R.id.rarity);
-            }
+            fromList.add(CardDbAdapter.KEY_SET);
+            toList.add(R.id.cardset);
+            fromList.add(CardDbAdapter.KEY_RARITY);
+            toList.add(R.id.rarity);
             if (PreferenceAdapter.getManaCostPref(getContext())) {
                 fromList.add(CardDbAdapter.KEY_MANACOST);
                 toList.add(R.id.cardcost);
@@ -414,6 +395,7 @@ public class ResultListFragment extends FamiliarFragment {
      */
     private void startCardViewFrag(long id) throws FamiliarDbException {
         try {
+            // TODO don't use bundle?
             Bundle args = new Bundle();
             int cardPosition = 0;
 

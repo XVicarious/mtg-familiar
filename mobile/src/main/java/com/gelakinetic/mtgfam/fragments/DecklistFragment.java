@@ -26,10 +26,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
 import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -61,10 +59,6 @@ import com.gelakinetic.mtgfam.helpers.tcgp.MarketPriceInfo;
 
 import org.apache.commons.collections4.comparators.ComparatorChain;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -95,7 +89,7 @@ public class DecklistFragment extends FamiliarListFragment {
 
     public static final String[] LEGALITY_DIAOG_FROM = new String[]{"format", "status"};
     public static final int[] LEGALITY_DIALOG_TO = new int[]{R.id.format, R.id.status};
-    public List<HashMap<String, String>> legalityMap = new ArrayList<>();
+    public final List<HashMap<String, String>> legalityMap = new ArrayList<>();
 
     static class LegalityCheckerTask extends AsyncTask<DecklistFragment, Void, DecklistFragment> {
 
@@ -112,34 +106,36 @@ public class DecklistFragment extends FamiliarListFragment {
                 cFormats.moveToFirst();
                 for (int i = 0; i < cFormats.getCount(); i++) {
                     boolean deckIsLegal = true;
-                    String deckLegality = "";
+                    String deckLegality;
                     String format =
                             cFormats.getString(cFormats.getColumnIndex(CardDbAdapter.KEY_NAME));
-                    for (CompressedDecklistInfo info : parentFrag.mCompressedDecklist) {
-                        if (!info.getName().isEmpty()) { /* Skip the headers */
-                            switch (CardDbAdapter.checkLegality(info.getName(), format, database)) {
-                                case CardDbAdapter.LEGAL: {
-                                    if ((format.equalsIgnoreCase("Commander") ||
-                                            format.equalsIgnoreCase("Brawl"))
-                                            && info.getTotalNumber() > 1 && !info.getType().contains("Basic")) {
-                                        deckIsLegal = false;
+                    synchronized (parentFrag.mCompressedDecklist) {
+                        for (CompressedDecklistInfo info : parentFrag.mCompressedDecklist) {
+                            if (!info.getName().isEmpty()) { /* Skip the headers */
+                                switch (CardDbAdapter.checkLegality(info.getName(), format, database)) {
+                                    case CardDbAdapter.LEGAL: {
+                                        if ((format.equalsIgnoreCase("Commander") ||
+                                                format.equalsIgnoreCase("Brawl"))
+                                                && info.getTotalNumber() > 1 && !info.getType().contains("Basic")) {
+                                            deckIsLegal = false;
+                                        }
+                                        break;
                                     }
-                                    break;
-                                }
-                                case CardDbAdapter.RESTRICTED: {
-                                    if (format.equalsIgnoreCase("Vintage")
-                                            && info.getTotalNumber() > 1) {
-                                        deckIsLegal = false;
+                                    case CardDbAdapter.RESTRICTED: {
+                                        if (format.equalsIgnoreCase("Vintage")
+                                                && info.getTotalNumber() > 1) {
+                                            deckIsLegal = false;
+                                        }
+                                        break;
                                     }
+                                    case CardDbAdapter.BANNED: {
+                                        deckIsLegal = false;
+                                        break;
+                                    }
+                                }
+                                if (!deckIsLegal) {
                                     break;
                                 }
-                                case CardDbAdapter.BANNED: {
-                                    deckIsLegal = false;
-                                    break;
-                                }
-                            }
-                            if (!deckIsLegal) {
-                                break;
                             }
                         }
                     }
@@ -212,13 +208,14 @@ public class DecklistFragment extends FamiliarListFragment {
                 };
 
         /* Call to set up our shared UI elements */
-        initializeMembers(
-                myFragmentView,
-                new int[]{R.id.cardlist},
-                new CardDataAdapter[]{new DecklistDataAdapter(mCompressedDecklist)},
-                new int[]{R.id.decklistPrice}, null, R.menu.decklist_select_menu,
-                addCardListener);
-
+        synchronized (mCompressedDecklist) {
+            initializeMembers(
+                    myFragmentView,
+                    new int[]{R.id.cardlist},
+                    new CardDataAdapter[]{new DecklistDataAdapter(mCompressedDecklist)},
+                    new int[]{R.id.decklistPrice}, null, R.menu.decklist_select_menu,
+                    addCardListener);
+        }
         myFragmentView.findViewById(R.id.add_card).setOnClickListener(view -> addCardToDeck(false));
         myFragmentView.findViewById(R.id.add_card_sideboard).setOnClickListener(
                 v -> addCardToDeck(true));
@@ -260,8 +257,8 @@ public class DecklistFragment extends FamiliarListFragment {
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
         outState.putBundle(FRAGMENT_TAG, saveState());
+        super.onSaveInstanceState(outState);
     }
 
     /**
@@ -275,7 +272,9 @@ public class DecklistFragment extends FamiliarListFragment {
             getFamiliarActivity().clearLoading();
         }
         PreferenceAdapter.setLastLoadedDecklist(getContext(), mCurrentDeck);
-        DecklistHelpers.WriteCompressedDecklist(this.getActivity(), mCompressedDecklist, getCurrentDeckName());
+        synchronized (mCompressedDecklist) {
+            DecklistHelpers.WriteCompressedDecklist(this.getActivity(), mCompressedDecklist, getCurrentDeckName());
+        }
     }
 
     /**
@@ -290,6 +289,17 @@ public class DecklistFragment extends FamiliarListFragment {
         if (getCardNameInput() == null || getCardNameInput().length() == 0 ||
                 getCardNumberInput() == null || getCardNumberInput().length() == 0) {
             return;
+        }
+
+        ArrayList<String> nonFoilSets;
+        FamiliarDbHandle handle = new FamiliarDbHandle();
+        try {
+            SQLiteDatabase database = DatabaseManager.openDatabase(getContext(), false, handle);
+            nonFoilSets = CardDbAdapter.getNonFoilSets(database);
+        } catch (SQLiteException | FamiliarDbException | IllegalStateException ignored) {
+            nonFoilSets = new ArrayList<>();
+        } finally {
+            DatabaseManager.closeDatabase(getContext(), handle);
         }
 
         final String name = String.valueOf(getCardNameInput());
@@ -310,7 +320,8 @@ public class DecklistFragment extends FamiliarListFragment {
                             mCompressedDecklist.get(firstIndex);
                     for (int i = 0; i < firstCard.mInfo.size(); i++) {
                         CardHelpers.IndividualSetInfo firstIsi = firstCard.mInfo.get(i);
-                        if (firstIsi.mSetCode.equals(card.getExpansion()) && firstIsi.mIsFoil.equals(card.mIsFoil)) {
+                        if (firstIsi.mSetCode.equals(card.getExpansion()) &&
+                                (firstIsi.mIsFoil.equals(card.mIsFoil) || nonFoilSets.contains(firstIsi.mSetCode))) {
                             firstIsi.mNumberOf++;
                             added = true;
                             break;
@@ -554,8 +565,10 @@ public class DecklistFragment extends FamiliarListFragment {
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_SUBJECT, R.string.decklist_share_title);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, DecklistHelpers
-                        .getSharableDecklist(mCompressedDecklist, getActivity()));
+                synchronized (mCompressedDecklist) {
+                    sendIntent.putExtra(Intent.EXTRA_TEXT, DecklistHelpers
+                            .getSharableDecklist(mCompressedDecklist, getActivity()));
+                }
                 sendIntent.setType("text/plain");
                 try {
                     startActivity(Intent.createChooser(sendIntent,
@@ -568,8 +581,10 @@ public class DecklistFragment extends FamiliarListFragment {
             }
             case R.id.deck_menu_save: {
                 String currentDeckName = getCurrentDeckName();
-                DecklistHelpers.WriteCompressedDecklist(getActivity(), mCompressedDecklist,
-                        currentDeckName);
+                synchronized (mCompressedDecklist) {
+                    DecklistHelpers.WriteCompressedDecklist(getActivity(), mCompressedDecklist,
+                            currentDeckName);
+                }
                 SnackbarWrapper.makeAndShowText(getActivity(), getString(R.string.decklist_saved_toast,
                         currentDeckName), SnackbarWrapper.LENGTH_SHORT);
                 return true;
@@ -582,69 +597,12 @@ public class DecklistFragment extends FamiliarListFragment {
                 }
                 mLegalityCheckerTask = new LegalityCheckerTask();
                 mLegalityCheckerTask.execute(this);
-                }
-            case R.id.deck_menu_export_dec: {
-                String deck = CardHelpers.cardListToDec(mCompressedDecklist);
-                return createExportedFile(deck, "dec");
-            }
-            case R.id.deck_menu_export_cardsphere: {
-                String deck = CardHelpers.cardListToCSV(mCompressedDecklist);
-                return createExportedFile(deck, "csv");
-            }
-            case R.id.deck_menu_export_deckbox: {
-                final String deckboxHeaders = "Count,Name,Edition,Foil\n";
-                String deck = CardHelpers.cardListToCSV(mCompressedDecklist, deckboxHeaders);
-                return createExportedFile(deck, "csv");
             }
             default: {
                 return super.onOptionsItemSelected(item);
             }
         }
 
-    }
-
-    /**
-     * Creates a text-based file with the given data of the given extension
-     * @param data what to be written to the file
-     * @param fileExtension extension of file without a period
-     * @return true if the file was created and written, false otherwise
-     */
-    private boolean createExportedFile(String data, String fileExtension) {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            String fileName = mCurrentDeck;
-            if ("".equals(fileName)) {
-                fileName = "unnamed_deck";
-            }
-            File file = new File(Environment.getExternalStorageDirectory(),
-                    getString(R.string.app_name));
-            if (!file.exists()) {
-                if (!file.mkdirs()) {
-                    SnackbarWrapper.makeAndShowText(getActivity(),
-                            getString(R.string.card_view_unable_to_create_dir), // todo: proper message
-                            Snackbar.LENGTH_LONG);
-                    return false;
-                }
-            }
-            file = new File(file, fileName + '.' + fileExtension);
-            FileOutputStream outputStream;
-            try {
-                outputStream = new FileOutputStream(file);
-                outputStream.write(data.getBytes());
-                outputStream.close();
-                SnackbarWrapper.makeAndShowText(getActivity(),
-                        getString(R.string.decklist_saved_toast, file.getPath()), // todo: make sure this is the right message
-                        Snackbar.LENGTH_SHORT);
-            } catch (FileNotFoundException fnf) {
-                // todo: write error saying that the file could not be created/written to
-                return false;
-            } catch (IOException ioe) {
-                // todo: write error saying there was an error writing or closing the file
-                return false;
-            }
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -700,31 +658,31 @@ public class DecklistFragment extends FamiliarListFragment {
 
         final String[] cardTypes = getResources().getStringArray(R.array.card_types_extra);
         final String[] cardHeaders = getResources().getStringArray(R.array.decklist_card_headers);
-
-        for (int i = 0; i < mCompressedDecklist.size(); i++) {
-            for (int j = 0; j < cardTypes.length; j++) {
-                final CompressedDecklistInfo cdi = mCompressedDecklist.get(i);
-                if (!cdi.getName().equals("") /* We only want entries that have a card attached */
-                        && (i == 0 || mCompressedDecklist.get(i - 1).header == null)
-                        && ((DecklistDataAdapter) getCardDataAdapter(0)).getTotalNumberOfType(j) > 0) {
-                    if (cdi.isSideboard() /* it is in the sideboard */
-                            /* The sideboard header isn't already there */
-                            && !insertHeaderAt(i, cardHeaders[0])) {
-                        break;
-                    } else if (j < cardHeaders.length - 1 /* if j is in range */
-                            /* the current card has the selected card type */
-                            && cdi.getType().contains(cardTypes[j])
-                            /* There isn't already a header */
-                            && !insertHeaderAt(i, cardHeaders[j + 1])) {
-                        break;
-                    } else if (j >= cardHeaders.length - 1
-                            && !insertHeaderAt(i, cardHeaders[cardHeaders.length - 1])) {
-                        break;
+        synchronized (mCompressedDecklist) {
+            for (int i = 0; i < mCompressedDecklist.size(); i++) {
+                for (int j = 0; j < cardTypes.length; j++) {
+                    final CompressedDecklistInfo cdi = mCompressedDecklist.get(i);
+                    if (!cdi.getName().equals("") /* We only want entries that have a card attached */
+                            && (i == 0 || mCompressedDecklist.get(i - 1).header == null)
+                            && ((DecklistDataAdapter) getCardDataAdapter(0)).getTotalNumberOfType(j) > 0) {
+                        if (cdi.mIsSideboard /* it is in the sideboard */
+                                /* The sideboard header isn't already there */
+                                && !insertHeaderAt(i, cardHeaders[0])) {
+                            break;
+                        } else if (j < cardHeaders.length - 1 /* if j is in range */
+                                /* the current card has the selected card type */
+                                && cdi.getType().contains(cardTypes[j])
+                                /* There isn't already a header */
+                                && !insertHeaderAt(i, cardHeaders[j + 1])) {
+                            break;
+                        } else if (j >= cardHeaders.length - 1
+                                && !insertHeaderAt(i, cardHeaders[cardHeaders.length - 1])) {
+                            break;
+                        }
                     }
                 }
             }
         }
-
     }
 
     /**
@@ -742,15 +700,17 @@ public class DecklistFragment extends FamiliarListFragment {
     @Override
     protected void onCardPriceLookupFailure(MtgCard data, Throwable exception) {
         /* Find the compressed wishlist info for this card */
-        for (CompressedDecklistInfo cdi : mCompressedDecklist) {
-            if (cdi.header == null && cdi.getName().equals(data.getName())) {
-                /* Find all foil and non foil compressed items with the same set code */
-                for (CardHelpers.IndividualSetInfo isi : cdi.mInfo) {
-                    if (isi.mSetCode.equals(data.getExpansion())) {
-                        /* Set the price as null and the message as the exception */
-                        isi.mMessage = exception.getLocalizedMessage();
-                        isi.mPrice = null;
-                        return;
+        synchronized (mCompressedDecklist) {
+            for (CompressedDecklistInfo cdi : mCompressedDecklist) {
+                if (cdi.header == null && cdi.getName().equals(data.getName())) {
+                    /* Find all foil and non foil compressed items with the same set code */
+                    for (CardHelpers.IndividualSetInfo isi : cdi.mInfo) {
+                        if (isi.mSetCode.equals(data.getExpansion())) {
+                            /* Set the price as null and the message as the exception */
+                            isi.mMessage = exception.getLocalizedMessage();
+                            isi.mPrice = null;
+                            return;
+                        }
                     }
                 }
             }
@@ -760,18 +720,20 @@ public class DecklistFragment extends FamiliarListFragment {
     @Override
     protected void onCardPriceLookupSuccess(MtgCard data, MarketPriceInfo result) {
         /* Find the compressed wishlist info for this card */
-        for (CompressedDecklistInfo cdi : mCompressedDecklist) {
-            if (cdi.header == null && cdi.getName().equals(data.getName())) {
-                /* Find all foil and non foil compressed items with the same set code */
-                for (CardHelpers.IndividualSetInfo isi : cdi.mInfo) {
-                    if (isi.mSetCode.equals(data.getExpansion())) {
-                        /* Set the whole price info object */
-                        if (result != null) {
-                            isi.mPrice = result;
+        synchronized (mCompressedDecklist) {
+            for (CompressedDecklistInfo cdi : mCompressedDecklist) {
+                if (cdi.header == null && cdi.getName().equals(data.getName())) {
+                    /* Find all foil and non foil compressed items with the same set code */
+                    for (CardHelpers.IndividualSetInfo isi : cdi.mInfo) {
+                        if (isi.mSetCode.equals(data.getExpansion())) {
+                            /* Set the whole price info object */
+                            if (result != null) {
+                                isi.mPrice = result;
+                            }
+                            /* The message will never be shown with a valid price,
+                             * so set it as DNE */
+                            isi.mMessage = getString(R.string.card_view_price_not_found);
                         }
-                        /* The message will never be shown with a valid price,
-                         * so set it as DNE */
-                        isi.mMessage = getString(R.string.card_view_price_not_found);
                     }
                 }
             }
@@ -791,12 +753,13 @@ public class DecklistFragment extends FamiliarListFragment {
 
         /* default */
         float totalPrice = 0;
-
-        for (CompressedDecklistInfo cdi : mCompressedDecklist) {
-            if (cdi.header == null) {
-                for (CardHelpers.IndividualSetInfo isi : cdi.mInfo) {
-                    if (isi.mPrice != null) {
-                        totalPrice += isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting()) * isi.mNumberOf;
+        synchronized (mCompressedDecklist) {
+            for (CompressedDecklistInfo cdi : mCompressedDecklist) {
+                if (cdi.header == null) {
+                    for (CardHelpers.IndividualSetInfo isi : cdi.mInfo) {
+                        if (isi.mPrice != null) {
+                            totalPrice += isi.mPrice.getPrice(isi.mIsFoil, getPriceSetting()).price * isi.mNumberOf;
+                        }
                     }
                 }
             }
@@ -835,11 +798,12 @@ public class DecklistFragment extends FamiliarListFragment {
         @Override
         public void onClickNotSelectMode(View view, int position) {
             /* if we aren't in select mode, open a dialog to edit this card */
-            final CompressedDecklistInfo item = mCompressedDecklist.get(position);
-            showDialog(DecklistDialogFragment.DIALOG_UPDATE_CARD,
-                    item.getName(), item.isSideboard());
+            synchronized (mCompressedDecklist) {
+                final CompressedDecklistInfo item = mCompressedDecklist.get(position);
+                showDialog(DecklistDialogFragment.DIALOG_UPDATE_CARD,
+                        item.getName(), item.mIsSideboard);
+            }
         }
-
     }
 
     /**
@@ -904,7 +868,9 @@ public class DecklistFragment extends FamiliarListFragment {
         @Override
         protected void onItemRemovedFinal() {
             // After the snackbar times out, write the decklist to the disk
-            DecklistHelpers.WriteCompressedDecklist(getActivity(), mCompressedDecklist, getCurrentDeckName());
+            synchronized (mCompressedDecklist) {
+                DecklistHelpers.WriteCompressedDecklist(getActivity(), mCompressedDecklist, getCurrentDeckName());
+            }
         }
 
         /**
@@ -982,11 +948,11 @@ public class DecklistFragment extends FamiliarListFragment {
                     continue;
                 }
                 if (    /* The type is not above -1 OR is not in the sideboard */
-                        (!(typeIndex > -1) || !cdi.isSideboard())
+                        (!(typeIndex > -1) || !cdi.mIsSideboard)
                                 /* The type is above -1 OR the card is in the sideboard */
-                                && (typeIndex > -1 || cdi.isSideboard())
+                                && (typeIndex > -1 || cdi.mIsSideboard)
                                 /* The card is in the sideboard OR the card is the wanted type */
-                                && (cdi.isSideboard() || cdi.getType().contains(types[typeIndex]))) {
+                                && (cdi.mIsSideboard || cdi.getType().contains(types[typeIndex]))) {
                     /* There of course are edge cases */
                     final boolean lookForEnchant = types[typeIndex > -1 ? typeIndex : 0]
                             .equals(types[5]);

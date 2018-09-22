@@ -59,7 +59,7 @@ import java.util.zip.GZIPInputStream;
 public class CardDbAdapter {
 
     /* Database version. Must be incremented whenever datagz is updated */
-    public static final int DATABASE_VERSION = 95;
+    public static final int DATABASE_VERSION = 98;
 
     /* The name of the database */
     public static final String DATABASE_NAME = "data";
@@ -1314,6 +1314,30 @@ public class CardDbAdapter {
     }
 
     /**
+     * Given a card name, find the ID for that card in the database
+     *
+     * @param name The name of the card to search for
+     * @return The ID in the database
+     */
+    public static long getIdFromName(String name, SQLiteDatabase mDb) throws FamiliarDbException {
+        String statement = "(" + KEY_NAME + " = " + sanitizeString(name, false) + ")";
+        Cursor c = null;
+        try {
+            c = mDb.query(true, DATABASE_TABLE_CARDS,
+                    new String[]{KEY_ID}, statement, null, null, null,
+                    KEY_NAME, null);
+            c.moveToFirst();
+            return c.getLong(c.getColumnIndex(KEY_ID));
+        } catch (SQLiteException | IllegalStateException e) {
+            throw new FamiliarDbException(e);
+        } finally {
+            if (null != c) {
+                c.close();
+            }
+        }
+    }
+
+    /**
      * Returns a Cursor positioned at the word specified by rowId.
      *
      * @param rowId   id of word to retrieve
@@ -1989,6 +2013,42 @@ public class CardDbAdapter {
                     return String.format(Locale.US, "%+.1f", stat);
                 }
                 return String.format(Locale.US, "%.1f", stat);
+            }
+        }
+    }
+
+    /**
+     * @param database The database to query with
+     * @return A list of all the sets which do not have foils (or are only foil)
+     * @throws FamiliarDbException If something goes terribly wrong
+     */
+    public static ArrayList<String> getNonFoilSets(SQLiteDatabase database) throws FamiliarDbException {
+        Cursor c = null;
+        ArrayList<String> nonFoilSets = new ArrayList<>();
+        try {
+            String sql = "SELECT " + KEY_CODE +
+                    " FROM " + DATABASE_TABLE_SETS +
+                    " WHERE " + KEY_CAN_BE_FOIL + " = 0;";
+            c = database.rawQuery(sql, null);
+            c.moveToFirst();
+
+            /* Some users had this cursor come up empty. I couldn't replicate. This is safe */
+            if (c.getCount() == 0) {
+                return nonFoilSets;
+            }
+
+            c.moveToFirst();
+            while (!c.isAfterLast()) {
+                nonFoilSets.add(c.getString(c.getColumnIndex(KEY_CODE)));
+                c.moveToNext();
+            }
+
+            return nonFoilSets;
+        } catch (SQLiteException | IllegalStateException e) {
+            throw new FamiliarDbException(e);
+        } finally {
+            if (null != c) {
+                c.close();
             }
         }
     }

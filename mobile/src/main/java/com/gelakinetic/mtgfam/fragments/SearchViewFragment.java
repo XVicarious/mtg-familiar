@@ -19,6 +19,7 @@
 
 package com.gelakinetic.mtgfam.fragments;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
@@ -82,7 +83,7 @@ import java.util.Map;
 public class SearchViewFragment extends FamiliarFragment {
 
     /* String keys */
-    public static final String CRITERIA = "criteria";
+    public static final String CRITERIA_FLAG = "criteria_flag";
 
     /* Default search file */
     private static final String DEFAULT_CRITERIA_FILE = "defaultSearchCriteria.ser";
@@ -299,7 +300,8 @@ public class SearchViewFragment extends FamiliarFragment {
             SearchCriteria searchCriteria = new SearchCriteria();
             searchCriteria.name = ((TextView) view.findViewById(R.id.text1)).getText().toString();
             Bundle args = new Bundle();
-            args.putSerializable(CRITERIA, searchCriteria);
+            args.putBoolean(CRITERIA_FLAG, true);
+            PreferenceAdapter.setSearchCriteria(getContext(), searchCriteria);
             ResultListFragment rlFrag = new ResultListFragment();
             startNewFragment(rlFrag, args);
         });
@@ -314,134 +316,7 @@ public class SearchViewFragment extends FamiliarFragment {
         mManaCostTextView.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
         /* Get a bunch of database info in a background task */
-        new AsyncTask<Void, Void, Void>() {
-
-            @Override
-            protected Void doInBackground(Void... voids) {
-
-                /* Only actually get data if the arrays are null */
-                Cursor formatCursor = null;
-                Cursor setCursor = null;
-                FamiliarDbHandle handle = new FamiliarDbHandle();
-                try {
-                    SQLiteDatabase database = DatabaseManager.openDatabase(getActivity(), false, handle);
-                    if (mSetNames == null) {
-                        /* Query the database for all sets and fill the arrays to populate the list of choices with */
-                        setCursor = CardDbAdapter.fetchAllSets(database);
-                        setCursor.moveToFirst();
-
-                        mSetNames = new String[setCursor.getCount()];
-                        mSetSymbols = new String[setCursor.getCount()];
-
-                        /* If this wasn't persisted, create it new */
-                        if (mSetCheckedIndices == null) {
-                            mSetCheckedIndices = new int[0];
-                        }
-
-                        for (int i = 0; i < setCursor.getCount(); i++) {
-                            mSetSymbols[i] = setCursor.getString(setCursor.getColumnIndex(CardDbAdapter.KEY_CODE));
-                            mSetNames[i] = setCursor.getString(setCursor.getColumnIndex(CardDbAdapter.KEY_NAME));
-                            setCursor.moveToNext();
-                        }
-                    }
-
-                    if (mFormatNames == null) {
-                        /* Query the database for all formats and fill the arrays to populate the list of choices with */
-                        formatCursor = CardDbAdapter.fetchAllFormats(database);
-                        formatCursor.moveToFirst();
-
-                        mFormatNames = new String[formatCursor.getCount()];
-
-                        for (int i = 0; i < formatCursor.getCount(); i++) {
-                            mFormatNames[i] = formatCursor.getString(formatCursor.getColumnIndex(CardDbAdapter.KEY_NAME));
-                            formatCursor.moveToNext();
-                        }
-                    }
-
-                    if (mSupertypes == null) {
-                        String[] supertypes = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_SUPERTYPE, true, database);
-                        mSupertypes = tokenStringsFromTypes(supertypes);
-                    }
-
-                    if (mSubtypes == null) {
-                        String[] subtypes = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_SUBTYPE, true, database);
-                        mSubtypes = tokenStringsFromTypes(subtypes);
-                    }
-
-                    if (mArtists == null) {
-                        mArtists = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_ARTIST, false, database);
-                    }
-
-                    if (mWatermarks == null) {
-                        mWatermarks = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_WATERMARK, false, database);
-                    }
-                } catch (SQLiteException | FamiliarDbException e) {
-                    handleFamiliarDbException(false);
-                } finally {
-                    if (null != setCursor) {
-                        setCursor.close();
-                    }
-                    if (null != formatCursor) {
-                        formatCursor.close();
-                    }
-                    DatabaseManager.closeDatabase(getActivity(), handle);
-                }
-
-                return null;
-            }
-
-            private String[] tokenStringsFromTypes(String[] types) {
-                String tokenStrings[] = new String[types.length * 2];
-                System.arraycopy(types, 0, tokenStrings, 0, types.length);
-                for (int i = 0; i < types.length; i++) {
-                    tokenStrings[types.length + i] = CardDbAdapter.EXCLUDE_TOKEN + types[i];
-                }
-                return tokenStrings;
-            }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                super.onPostExecute(aVoid);
-                try {
-                    getActivity().runOnUiThread(() -> {
-                        /* set the autocomplete for supertypes */
-                        if (null != mSupertypes) {
-                            ArrayAdapter<String> supertypeAdapter = new ArrayAdapter<>(
-                                    SearchViewFragment.this.getActivity(), R.layout.list_item_1, mSupertypes);
-                            mSupertypeField.setAdapter(supertypeAdapter);
-                        }
-
-                        if (null != mSubtypes) {
-                            /* set the autocomplete for subtypes */
-                            ArrayAdapter<String> subtypeAdapter = new ArrayAdapter<>(
-                                    SearchViewFragment.this.getActivity(), R.layout.list_item_1, mSubtypes);
-                            mSubtypeField.setAdapter(subtypeAdapter);
-                        }
-
-                        if (null != mArtists) {
-                            /* set the autocomplete for sets */
-                            final SetAdapter setAdapter = new SetAdapter();
-                            mSetField.setAdapter(setAdapter);
-                            /* set the autocomplete for artists */
-                            ArrayAdapter<String> artistAdapter = new ArrayAdapter<>(
-                                    SearchViewFragment.this.getActivity(), R.layout.list_item_1, mArtists);
-                            mArtistField.setThreshold(1);
-                            mArtistField.setAdapter(artistAdapter);
-                        }
-
-                        if (null != mWatermarks) {
-                            /* set the autocomplete for watermarks */
-                            ArrayAdapter<String> watermarkAdapter = new ArrayAdapter<>(
-                                    SearchViewFragment.this.getActivity(), R.layout.list_item_1, mWatermarks);
-                            mWatermarkField.setThreshold(1);
-                            mWatermarkField.setAdapter(watermarkAdapter);
-                        }
-                    });
-                } catch (NullPointerException e) {
-                    /* If the UI thread isn't here, eat it */
-                }
-            }
-        }.execute();
+        new BuildAutocompleteTask().execute(this);
 
         /* set the search button! */
         searchButton.setOnClickListener(v -> doSearch());
@@ -450,14 +325,145 @@ public class SearchViewFragment extends FamiliarFragment {
         return myFragmentView;
     }
 
-    private class SetAdapter extends ArrayAdapter<String> {
+    private static class BuildAutocompleteTask extends AsyncTask<SearchViewFragment, Void, SearchViewFragment> {
+        @Override
+        protected SearchViewFragment doInBackground(SearchViewFragment... frags) {
+
+            SearchViewFragment frag = frags[0];
+            /* Only actually get data if the arrays are null */
+            Cursor formatCursor = null;
+            Cursor setCursor = null;
+            FamiliarDbHandle handle = new FamiliarDbHandle();
+            try {
+                SQLiteDatabase database = DatabaseManager.openDatabase(frag.getActivity(), false, handle);
+                if (frag.mSetNames == null) {
+                    /* Query the database for all sets and fill the arrays to populate the list of choices with */
+                    setCursor = CardDbAdapter.fetchAllSets(database);
+                    setCursor.moveToFirst();
+
+                    frag.mSetNames = new String[setCursor.getCount()];
+                    frag.mSetSymbols = new String[setCursor.getCount()];
+
+                    /* If this wasn't persisted, create it new */
+                    if (frag.mSetCheckedIndices == null) {
+                        frag.mSetCheckedIndices = new int[0];
+                    }
+
+                    for (int i = 0; i < setCursor.getCount(); i++) {
+                        frag.mSetSymbols[i] = setCursor.getString(setCursor.getColumnIndex(CardDbAdapter.KEY_CODE));
+                        frag.mSetNames[i] = setCursor.getString(setCursor.getColumnIndex(CardDbAdapter.KEY_NAME));
+                        setCursor.moveToNext();
+                    }
+                }
+
+                if (frag.mFormatNames == null) {
+                    /* Query the database for all formats and fill the arrays to populate the list of choices with */
+                    formatCursor = CardDbAdapter.fetchAllFormats(database);
+                    formatCursor.moveToFirst();
+
+                    frag.mFormatNames = new String[formatCursor.getCount()];
+
+                    for (int i = 0; i < formatCursor.getCount(); i++) {
+                        frag.mFormatNames[i] = formatCursor.getString(formatCursor.getColumnIndex(CardDbAdapter.KEY_NAME));
+                        formatCursor.moveToNext();
+                    }
+                }
+
+                if (frag.mSupertypes == null) {
+                    String[] supertypes = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_SUPERTYPE, true, database);
+                    frag.mSupertypes = tokenStringsFromTypes(supertypes);
+                }
+
+                if (frag.mSubtypes == null) {
+                    String[] subtypes = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_SUBTYPE, true, database);
+                    frag.mSubtypes = tokenStringsFromTypes(subtypes);
+                }
+
+                if (frag.mArtists == null) {
+                    frag.mArtists = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_ARTIST, false, database);
+                }
+
+                if (frag.mWatermarks == null) {
+                    frag.mWatermarks = CardDbAdapter.getUniqueColumnArray(CardDbAdapter.KEY_WATERMARK, false, database);
+                }
+            } catch (SQLiteException | FamiliarDbException e) {
+                frag.handleFamiliarDbException(false);
+            } finally {
+                if (null != setCursor) {
+                    setCursor.close();
+                }
+                if (null != formatCursor) {
+                    formatCursor.close();
+                }
+                DatabaseManager.closeDatabase(frag.getActivity(), handle);
+            }
+
+            return frag;
+        }
+
+        private String[] tokenStringsFromTypes(String[] types) {
+            String tokenStrings[] = new String[types.length * 2];
+            System.arraycopy(types, 0, tokenStrings, 0, types.length);
+            for (int i = 0; i < types.length; i++) {
+                tokenStrings[types.length + i] = CardDbAdapter.EXCLUDE_TOKEN + types[i];
+            }
+            return tokenStrings;
+        }
+
+        @Override
+        protected void onPostExecute(SearchViewFragment frag) {
+            super.onPostExecute(frag);
+            Activity activity = frag.getActivity();
+            if (null == activity) {
+                return;
+            }
+            try {
+                /* set the autocomplete for supertypes */
+                if (null != frag.mSupertypes) {
+                    ArrayAdapter<String> supertypeAdapter = new ArrayAdapter<>(
+                            frag.getActivity(), R.layout.list_item_1, frag.mSupertypes);
+                    frag.mSupertypeField.setAdapter(supertypeAdapter);
+                }
+
+                if (null != frag.mSubtypes) {
+                    /* set the autocomplete for subtypes */
+                    ArrayAdapter<String> subtypeAdapter = new ArrayAdapter<>(
+                            frag.getActivity(), R.layout.list_item_1, frag.mSubtypes);
+                    frag.mSubtypeField.setAdapter(subtypeAdapter);
+                }
+
+                if (null != frag.mArtists) {
+                    /* set the autocomplete for sets */
+                    final SetAdapter setAdapter = new SetAdapter(frag);
+                    frag.mSetField.setAdapter(setAdapter);
+                    /* set the autocomplete for artists */
+                    ArrayAdapter<String> artistAdapter = new ArrayAdapter<>(
+                            frag.getActivity(), R.layout.list_item_1, frag.mArtists);
+                    frag.mArtistField.setThreshold(1);
+                    frag.mArtistField.setAdapter(artistAdapter);
+                }
+
+                if (null != frag.mWatermarks) {
+                    /* set the autocomplete for watermarks */
+                    ArrayAdapter<String> watermarkAdapter = new ArrayAdapter<>(
+                            frag.getActivity(), R.layout.list_item_1, frag.mWatermarks);
+                    frag.mWatermarkField.setThreshold(1);
+                    frag.mWatermarkField.setAdapter(watermarkAdapter);
+                }
+            } catch (NullPointerException e) {
+                /* If the UI thread isn't here, eat it */
+            }
+        }
+    }
+
+    private static class SetAdapter extends ArrayAdapter<String> {
         final Map<String, String> symbolsByAutocomplete = new LinkedHashMap<>();
 
-        SetAdapter() {
-            super(SearchViewFragment.this.getActivity(), R.layout.list_item_1);
-            for (int index = 0; index < mSetSymbols.length; index++) {
-                String autocomplete = "[" + mSetSymbols[index] + "] " + mSetNames[index];
-                String set = mSetSymbols[index];
+        SetAdapter(SearchViewFragment frag) {
+            super(frag.getActivity(), R.layout.list_item_1);
+            for (int index = 0; index < frag.mSetSymbols.length; index++) {
+                String autocomplete = "[" + frag.mSetSymbols[index] + "] " + frag.mSetNames[index];
+                String set = frag.mSetSymbols[index];
                 symbolsByAutocomplete.put(autocomplete, set);
                 this.add(autocomplete);
             }
@@ -479,6 +485,17 @@ public class SearchViewFragment extends FamiliarFragment {
         }
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Save the search criteria
+        try {
+            PreferenceAdapter.setSearchViewCriteria(getContext(), parseForm());
+        } catch (ArrayIndexOutOfBoundsException | NullPointerException e) {
+            /* Eat it */
+        }
+    }
+
     /**
      * Generic onResume. Catches when consolidation is changed in preferences
      */
@@ -489,6 +506,9 @@ public class SearchViewFragment extends FamiliarFragment {
         /* Do we want to consolidate different printings of the same card in results, or not? */
         boolean consolidate = PreferenceAdapter.getConsolidateSearch(getContext());
         mSetSpinner.setSelection(consolidate ? CardDbAdapter.MOST_RECENT_PRINTING : CardDbAdapter.ALL_PRINTINGS);
+
+        // Load the saved criteria
+        setFieldsFromCriteria(PreferenceAdapter.getSearchViewCriteria(getContext()));
     }
 
     /**
@@ -498,23 +518,25 @@ public class SearchViewFragment extends FamiliarFragment {
      */
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt(SAVED_FORMAT_KEY, mSelectedFormat);
+        outState.putIntArray(SAVED_RARITY_KEY, mRarityCheckedIndices);
+        outState.putIntArray(SAVED_SET_KEY, mSetCheckedIndices);
         super.onSaveInstanceState(outState);
-        if (outState != null) {
-            outState.putInt(SAVED_FORMAT_KEY, mSelectedFormat);
-            outState.putIntArray(SAVED_RARITY_KEY, mRarityCheckedIndices);
-            outState.putIntArray(SAVED_SET_KEY, mSetCheckedIndices);
-        }
     }
 
     /**
      * This function creates a results fragment, sends it the search criteria, and starts it
      */
     private void doSearch() {
-        SearchCriteria searchCriteria = parseForm();
         Bundle args = new Bundle();
-        args.putSerializable(CRITERIA, searchCriteria);
-        ResultListFragment rlFrag = new ResultListFragment();
-        startNewFragment(rlFrag, args);
+        args.putBoolean(CRITERIA_FLAG, true);
+        try {
+            PreferenceAdapter.setSearchCriteria(getContext(), parseForm());
+            ResultListFragment rlFrag = new ResultListFragment();
+            startNewFragment(rlFrag, args);
+        } catch (ArrayIndexOutOfBoundsException | NullPointerException e) {
+            SnackbarWrapper.makeAndShowText(getActivity(), R.string.judges_corner_error, SnackbarWrapper.LENGTH_SHORT);
+        }
     }
 
     /**
@@ -522,7 +544,7 @@ public class SearchViewFragment extends FamiliarFragment {
      *
      * @return a SearchCriteria with what the user wants to search for
      */
-    private SearchCriteria parseForm() {
+    private SearchCriteria parseForm() throws ArrayIndexOutOfBoundsException, NullPointerException {
         SearchCriteria searchCriteria = new SearchCriteria();
 
         /* Because Android Studio whines */
@@ -816,13 +838,12 @@ public class SearchViewFragment extends FamiliarFragment {
      */
     private void persistOptions() {
         try {
-            SearchCriteria searchCriteria = parseForm();
             FileOutputStream fileStream = this.getActivity()
                     .openFileOutput(DEFAULT_CRITERIA_FILE, Context.MODE_PRIVATE);
             ObjectOutputStream os = new ObjectOutputStream(fileStream);
-            os.writeObject(searchCriteria);
+            os.writeObject(parseForm());
             os.close();
-        } catch (IOException e) {
+        } catch (IOException | ArrayIndexOutOfBoundsException | NullPointerException e) {
             SnackbarWrapper.makeAndShowText(this.getActivity(), R.string.search_toast_cannot_save, SnackbarWrapper.LENGTH_LONG);
         }
     }
@@ -837,156 +858,177 @@ public class SearchViewFragment extends FamiliarFragment {
             SearchCriteria criteria = (SearchCriteria) oInputStream.readObject();
             oInputStream.close();
 
-            mNameField.setText(criteria.name);
-
-            if (null != criteria.superTypes && criteria.superTypes.size() > 0) {
-                for (String supertype : criteria.superTypes) {
-                    mSupertypeField.addObject(supertype);
-                }
-            } else {
-                mSupertypeField.clearTextAndTokens();
-            }
-
-            if (null != criteria.subTypes && criteria.subTypes.size() > 0) {
-                for (String subtype : criteria.subTypes) {
-                    mSubtypeField.addObject(subtype);
-                }
-            } else {
-                mSubtypeField.clearTextAndTokens();
-            }
-
-            mTextField.setText(criteria.text);
-            mArtistField.setText(criteria.artist);
-            mWatermarkField.setText(criteria.watermark);
-            mFlavorField.setText(criteria.flavor);
-            mCollectorsNumberField.setText(criteria.collectorsNumber);
-
-            if (criteria.color != null) {
-                mCheckboxW.setChecked(criteria.color.contains("W"));
-                mCheckboxU.setChecked(criteria.color.contains("U"));
-                mCheckboxB.setChecked(criteria.color.contains("B"));
-                mCheckboxR.setChecked(criteria.color.contains("R"));
-                mCheckboxG.setChecked(criteria.color.contains("G"));
-                mCheckboxL.setChecked(criteria.color.contains("L"));
-            }
-            mColorSpinner.setSelection(criteria.colorLogic);
-
-            if (criteria.colorIdentity != null) {
-                mCheckboxWIdentity.setChecked(criteria.colorIdentity.contains("W"));
-                mCheckboxUIdentity.setChecked(criteria.colorIdentity.contains("U"));
-                mCheckboxBIdentity.setChecked(criteria.colorIdentity.contains("B"));
-                mCheckboxRIdentity.setChecked(criteria.colorIdentity.contains("R"));
-                mCheckboxGIdentity.setChecked(criteria.colorIdentity.contains("G"));
-                mCheckboxLIdentity.setChecked(criteria.colorIdentity.contains("L"));
-            }
-            mColorIdentitySpinner.setSelection(criteria.colorIdentityLogic);
-
-            mTextSpinner.setSelection(criteria.textLogic);
-            mTypeSpinner.setSelection(criteria.typeLogic);
-            mSetSpinner.setSelection(criteria.setLogic);
-
-            List<String> logicChoices = Arrays.asList(getResources().getStringArray(R.array.logic_spinner));
-            mPowLogic.setSelection(logicChoices.indexOf(criteria.powLogic));
-            List<String> ptList = Arrays.asList(getResources().getStringArray(R.array.pt_spinner));
-            float p = criteria.powChoice;
-            if (p != CardDbAdapter.NO_ONE_CARES) {
-                if (p == CardDbAdapter.STAR)
-                    mPowChoice.setSelection(ptList.indexOf("*"));
-                else if (p == CardDbAdapter.ONE_PLUS_STAR)
-                    mPowChoice.setSelection(ptList.indexOf("1+*"));
-                else if (p == CardDbAdapter.TWO_PLUS_STAR)
-                    mPowChoice.setSelection(ptList.indexOf("2+*"));
-                else if (p == CardDbAdapter.SEVEN_MINUS_STAR)
-                    mPowChoice.setSelection(ptList.indexOf("7-*"));
-                else if (p == CardDbAdapter.STAR_SQUARED)
-                    mPowChoice.setSelection(ptList.indexOf("*^2"));
-                else if (p == CardDbAdapter.X)
-                    mPowChoice.setSelection(ptList.indexOf("X"));
-                else if (p == CardDbAdapter.QUESTION_MARK)
-                    mPowChoice.setSelection(ptList.indexOf("?"));
-                else if (p == CardDbAdapter.INFINITY)
-                    mPowChoice.setSelection(ptList.indexOf("∞"));
-                else {
-                    if (p == (int) p) {
-                        mPowChoice.setSelection(ptList.indexOf(((int) p) + ""));
-                    } else {
-                        mPowChoice.setSelection(ptList.indexOf(p + ""));
-                    }
-                }
-            }
-            mTouLogic.setSelection(logicChoices.indexOf(criteria.touLogic));
-            float t = criteria.touChoice;
-            if (t != CardDbAdapter.NO_ONE_CARES) {
-                if (t == CardDbAdapter.STAR)
-                    mTouChoice.setSelection(ptList.indexOf("*"));
-                else if (t == CardDbAdapter.ONE_PLUS_STAR)
-                    mTouChoice.setSelection(ptList.indexOf("1+*"));
-                else if (t == CardDbAdapter.TWO_PLUS_STAR)
-                    mTouChoice.setSelection(ptList.indexOf("2+*"));
-                else if (t == CardDbAdapter.SEVEN_MINUS_STAR)
-                    mTouChoice.setSelection(ptList.indexOf("7-*"));
-                else if (t == CardDbAdapter.STAR_SQUARED)
-                    mTouChoice.setSelection(ptList.indexOf("*^2"));
-                else if (t == CardDbAdapter.X)
-                    mTouChoice.setSelection(ptList.indexOf("X"));
-                else if (t == CardDbAdapter.QUESTION_MARK)
-                    mTouChoice.setSelection(ptList.indexOf("?"));
-                else if (t == CardDbAdapter.INFINITY)
-                    mTouChoice.setSelection(ptList.indexOf("∞"));
-                else {
-                    if (t == (int) t) {
-                        mTouChoice.setSelection(ptList.indexOf(((int) t) + ""));
-                    } else {
-                        mTouChoice.setSelection(ptList.indexOf(t + ""));
-                    }
-                }
-            }
-            mCmcLogic.setSelection(logicChoices.indexOf(criteria.cmcLogic));
-            mCmcChoice.setSelection(Arrays.asList(getResources().getStringArray(R.array.cmc_spinner))
-                    .indexOf(String.valueOf(criteria.cmc)));
-
-            if (criteria.sets != null && criteria.sets.size() > 0) {
-                /* Get a list of the persisted sets */
-                for (String set : criteria.sets) {
-                    mSetField.addObject(set);
-                }
-            } else {
-                mSetField.clearTextAndTokens();
-            }
-            if (criteria.manaCost != null && criteria.manaCost.size() > 0) {
-                for (String mana : criteria.manaCost) {
-                    mManaCostTextView.addObject(mana);
-                }
-            } else {
-                mManaCostTextView.clearTextAndTokens();
-            }
-            mManaComparisonSpinner.setSelection(criteria.manaCostLogic.ordinal());
-            if (mFormatNames != null) {
-                mSelectedFormat = Arrays.asList(mFormatNames).indexOf(criteria.format);
-            }
-
-            if (criteria.rarity != null) {
-                ArrayList<Integer> rarityCheckedIndicesTmp = new ArrayList<>();
-                /* For each rarity */
-                for (int i = 0; i < mRarityNames.length; i++) {
-                    /* If the persisted options contain that rarity */
-                    if (criteria.rarity.contains(mRarityNames[i].charAt(0) + "")) {
-                        /* Save that index */
-                        rarityCheckedIndicesTmp.add(i);
-                    }
-                }
-                mRarityCheckedIndices = new int[rarityCheckedIndicesTmp.size()];
-                for (int i = 0; i < mRarityCheckedIndices.length; i++) {
-                    mRarityCheckedIndices[i] = rarityCheckedIndicesTmp.get(i);
-                }
-            }
-
-            this.removeDialog(getFragmentManager());
-            checkDialogButtonColors();
-
+            setFieldsFromCriteria(criteria);
         } catch (IOException | ClassNotFoundException e) {
             SnackbarWrapper.makeAndShowText(this.getActivity(), R.string.search_toast_cannot_load, SnackbarWrapper.LENGTH_LONG);
         }
+    }
+
+    private void setFieldsFromCriteria(SearchCriteria criteria) {
+
+        /* Set name */
+        if (null != criteria.name) {
+            mNameField.setText(criteria.name);
+        }
+
+        /* Set type fields */
+        if (null != criteria.superTypes && criteria.superTypes.size() > 0) {
+            for (String supertype : criteria.superTypes) {
+                mSupertypeField.addObject(supertype);
+            }
+        } else {
+            mSupertypeField.clearTextAndTokens();
+        }
+        if (null != criteria.subTypes && criteria.subTypes.size() > 0) {
+            for (String subtype : criteria.subTypes) {
+                mSubtypeField.addObject(subtype);
+            }
+        } else {
+            mSubtypeField.clearTextAndTokens();
+        }
+        mTypeSpinner.setSelection(criteria.typeLogic);
+
+        /* Set text fields */
+        mTextField.setText(criteria.text);
+        mTextSpinner.setSelection(criteria.textLogic);
+
+        /* Set color fields */
+        if (criteria.color != null) {
+            mCheckboxW.setChecked(criteria.color.contains("W"));
+            mCheckboxU.setChecked(criteria.color.contains("U"));
+            mCheckboxB.setChecked(criteria.color.contains("B"));
+            mCheckboxR.setChecked(criteria.color.contains("R"));
+            mCheckboxG.setChecked(criteria.color.contains("G"));
+            mCheckboxL.setChecked(criteria.color.contains("L"));
+        }
+        mColorSpinner.setSelection(criteria.colorLogic);
+
+        if (criteria.colorIdentity != null) {
+            mCheckboxWIdentity.setChecked(criteria.colorIdentity.contains("W"));
+            mCheckboxUIdentity.setChecked(criteria.colorIdentity.contains("U"));
+            mCheckboxBIdentity.setChecked(criteria.colorIdentity.contains("B"));
+            mCheckboxRIdentity.setChecked(criteria.colorIdentity.contains("R"));
+            mCheckboxGIdentity.setChecked(criteria.colorIdentity.contains("G"));
+            mCheckboxLIdentity.setChecked(criteria.colorIdentity.contains("L"));
+        }
+        mColorIdentitySpinner.setSelection(criteria.colorIdentityLogic);
+
+        /* Set power and toughness fields */
+        List<String> logicChoices = Arrays.asList(getResources().getStringArray(R.array.logic_spinner));
+        mPowLogic.setSelection(logicChoices.indexOf(criteria.powLogic));
+        List<String> ptList = Arrays.asList(getResources().getStringArray(R.array.pt_spinner));
+        float p = criteria.powChoice;
+        if (p != CardDbAdapter.NO_ONE_CARES) {
+            if (p == CardDbAdapter.STAR)
+                mPowChoice.setSelection(ptList.indexOf("*"));
+            else if (p == CardDbAdapter.ONE_PLUS_STAR)
+                mPowChoice.setSelection(ptList.indexOf("1+*"));
+            else if (p == CardDbAdapter.TWO_PLUS_STAR)
+                mPowChoice.setSelection(ptList.indexOf("2+*"));
+            else if (p == CardDbAdapter.SEVEN_MINUS_STAR)
+                mPowChoice.setSelection(ptList.indexOf("7-*"));
+            else if (p == CardDbAdapter.STAR_SQUARED)
+                mPowChoice.setSelection(ptList.indexOf("*^2"));
+            else if (p == CardDbAdapter.X)
+                mPowChoice.setSelection(ptList.indexOf("X"));
+            else if (p == CardDbAdapter.QUESTION_MARK)
+                mPowChoice.setSelection(ptList.indexOf("?"));
+            else if (p == CardDbAdapter.INFINITY)
+                mPowChoice.setSelection(ptList.indexOf("∞"));
+            else {
+                if (p == (int) p) {
+                    mPowChoice.setSelection(ptList.indexOf(((int) p) + ""));
+                } else {
+                    mPowChoice.setSelection(ptList.indexOf(p + ""));
+                }
+            }
+        }
+        mTouLogic.setSelection(logicChoices.indexOf(criteria.touLogic));
+        float t = criteria.touChoice;
+        if (t != CardDbAdapter.NO_ONE_CARES) {
+            if (t == CardDbAdapter.STAR)
+                mTouChoice.setSelection(ptList.indexOf("*"));
+            else if (t == CardDbAdapter.ONE_PLUS_STAR)
+                mTouChoice.setSelection(ptList.indexOf("1+*"));
+            else if (t == CardDbAdapter.TWO_PLUS_STAR)
+                mTouChoice.setSelection(ptList.indexOf("2+*"));
+            else if (t == CardDbAdapter.SEVEN_MINUS_STAR)
+                mTouChoice.setSelection(ptList.indexOf("7-*"));
+            else if (t == CardDbAdapter.STAR_SQUARED)
+                mTouChoice.setSelection(ptList.indexOf("*^2"));
+            else if (t == CardDbAdapter.X)
+                mTouChoice.setSelection(ptList.indexOf("X"));
+            else if (t == CardDbAdapter.QUESTION_MARK)
+                mTouChoice.setSelection(ptList.indexOf("?"));
+            else if (t == CardDbAdapter.INFINITY)
+                mTouChoice.setSelection(ptList.indexOf("∞"));
+            else {
+                if (t == (int) t) {
+                    mTouChoice.setSelection(ptList.indexOf(((int) t) + ""));
+                } else {
+                    mTouChoice.setSelection(ptList.indexOf(t + ""));
+                }
+            }
+        }
+
+        /* Set CMC fields */
+        mCmcLogic.setSelection(logicChoices.indexOf(criteria.cmcLogic));
+        mCmcChoice.setSelection(Arrays.asList(getResources().getStringArray(R.array.cmc_spinner))
+                .indexOf(String.valueOf(criteria.cmc)));
+
+        /* Set mana fields */
+        if (criteria.manaCost != null && criteria.manaCost.size() > 0) {
+            for (String mana : criteria.manaCost) {
+                mManaCostTextView.addObject(mana);
+            }
+        } else {
+            mManaCostTextView.clearTextAndTokens();
+        }
+        if (null != criteria.manaCostLogic) {
+            mManaComparisonSpinner.setSelection(criteria.manaCostLogic.ordinal());
+        }
+
+        /* set format */
+        if (mFormatNames != null) {
+            mSelectedFormat = Arrays.asList(mFormatNames).indexOf(criteria.format);
+        }
+
+        /* Set rarity */
+        if (criteria.rarity != null) {
+            ArrayList<Integer> rarityCheckedIndicesTmp = new ArrayList<>();
+            /* For each rarity */
+            for (int i = 0; i < mRarityNames.length; i++) {
+                /* If the persisted options contain that rarity */
+                if (criteria.rarity.contains(mRarityNames[i].charAt(0) + "")) {
+                    /* Save that index */
+                    rarityCheckedIndicesTmp.add(i);
+                }
+            }
+            mRarityCheckedIndices = new int[rarityCheckedIndicesTmp.size()];
+            for (int i = 0; i < mRarityCheckedIndices.length; i++) {
+                mRarityCheckedIndices[i] = rarityCheckedIndicesTmp.get(i);
+            }
+        }
+
+        /* Set expansions */
+        if (criteria.sets != null && criteria.sets.size() > 0) {
+            /* Get a list of the persisted sets */
+            for (String set : criteria.sets) {
+                mSetField.addObject(set);
+            }
+        } else {
+            mSetField.clearTextAndTokens();
+        }
+        mSetSpinner.setSelection(criteria.setLogic);
+
+        /* Set text fields at the end */
+        mWatermarkField.setText(criteria.watermark);
+        mFlavorField.setText(criteria.flavor);
+        mArtistField.setText(criteria.artist);
+        mCollectorsNumberField.setText(criteria.collectorsNumber);
+
+        this.removeDialog(getFragmentManager());
+        checkDialogButtonColors();
     }
 
     /**
